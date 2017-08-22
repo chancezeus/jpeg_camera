@@ -7,5 +7,5 @@
     "type": "git",
     "url": "https://github.com/ktunkiewicz/jpeg_camera"
   },
-  "main": "src/index.js",
+  "main": "src/index.js"
 }
