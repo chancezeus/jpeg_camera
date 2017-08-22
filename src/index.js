@@ -1,6 +1,6 @@
-import JpegCamera from 'jpeg_camera';
-import JpegCameraHtml5 from 'jpeg_camera_html5';
-import JpegCameraFlash from 'jpeg_camera_flash';
+import JpegCamera from './jpeg_camera';
+import JpegCameraHtml5 from './jpeg_camera_html5';
+import JpegCameraFlash from './jpeg_camera_flash';
 
 if (!navigator.getUserMedia) {
   navigator.getUserMedia =
