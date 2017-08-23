@@ -235,13 +235,13 @@ export default class JpegCamera {
   // @option options shutter [Boolean] Whether to play the shutter sound.
   //
   // @return [Snapshot] The snapshot that was taken.
-  capture(theOptions) {
-    let options = theOptions;
-    if (options == null) { options = {}; }
+  capture(newOptions) {
+    let options = Object.assign({}, this.options);
+    if (newOptions) {
+      options = Object.assign({}, options, newOptions);
+    }
     const snapshot = new Snapshot(this, options);
     this.snapshots[snapshot.id] = snapshot;
-
-    options = snapshot.options();
 
     if (options.shutter) {
       this.enginePlayShutterSound();

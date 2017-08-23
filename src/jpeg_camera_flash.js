@@ -1,5 +1,5 @@
 import autoBind from 'auto-bind';
-import JpegCamera from './jpeg_camera';
+import JpegCamera, { isCanvasSupported } from './jpeg_camera';
 import { WebcamError, WebcamErrors } from './errors';
 
 //
@@ -14,6 +14,11 @@ export default class JpegCameraFlash extends JpegCamera {
     autoBind(this);
     this.engineInit();
   }
+
+  destruct() {
+    this.waitForVideoReadyTimer = null;
+  }
+
   // Used by flash object to send message to our instance.
   sendMessage(id, method, ...args) {
     const instance = this.instances[parseInt(id, 10)];
@@ -48,7 +53,7 @@ export default class JpegCameraFlash extends JpegCamera {
       id: this.id,
       width: this.viewWidth,
       height: this.viewHeight,
-      shutter_url: this.options.shutterMp3Url,
+      shutter_url: this.options.shutterMp3Url ? this.options.shutterMp3Url : '',
     };
     const that = this;
     const callback = (event) => {
@@ -57,7 +62,10 @@ export default class JpegCameraFlash extends JpegCamera {
       }
       that.debug('Flash loaded.');
       that.flash = document.getElementById(flashObjectId);
-      return that.flash;
+      if (this.options.onReady) {
+        this.waitForVideoReady();
+      }
+      return null;
     };
 
     const containerToBeReplaced = document.createElement('div');
@@ -68,7 +76,7 @@ export default class JpegCameraFlash extends JpegCamera {
     this.container.appendChild(containerToBeReplaced);
 
     // eslint-disable-next-line no-undef
-    return swfobject.embedSWF(
+    swfobject.embedSWF(
       this.options.swfUrl,
       containerToBeReplaced.id,
       this.viewWidth,
@@ -82,12 +90,30 @@ export default class JpegCameraFlash extends JpegCamera {
     );
   }
 
+  waitForVideoReadyTimer = null;
+  waitForVideoReady() {
+    try {
+      // eslint-disable-next-line no-underscore-dangle
+      if (this.flash._capture(1, false, 0.1, 1)) {
+        return this.options.onReady.call(this, null);
+      }
+    } catch (e) {
+      // do nothing
+    }
+    /*
+    */
+    const that = this;
+    this.waitForVideoReadyTimer = setTimeout((() => that.waitForVideoReady()), 500);
+    return null;
+  }
+
   resizePreview() {
     if ((this.viewWidth < 215) || (this.viewHeight < 138)) {
       throw new WebcamError(WebcamErrors.FLASH_WINDOW_TOO_SMALL);
     }
-    this.flash.width = this.viewWidth;
-    this.flash.height = this.viewHeight;
+    this.flash.parentNode.removeChild(this.flash);
+    this.flash = null;
+    this.engineInit();
     return this;
   }
 
@@ -119,9 +145,10 @@ export default class JpegCameraFlash extends JpegCamera {
 
   engineGetImageData(snapshot) {
     let result;
-    const flashData = this.flash.getImageData(snapshot.id);
+    // eslint-disable-next-line no-underscore-dangle
+    const flashData = this.flash._get_image_data(snapshot.id);
 
-    if (JpegCamera.canvas_supported()) {
+    if (isCanvasSupported()) {
       const canvas = document.createElement('canvas');
       canvas.width = flashData.width;
       canvas.height = flashData.height;
@@ -175,11 +202,13 @@ export default class JpegCameraFlash extends JpegCamera {
   }
 
   engineDiscard(snapshot) {
-    return this.flash.discard(snapshot.id);
+    // eslint-disable-next-line no-underscore-dangle
+    return this.flash._discard(snapshot.id);
   }
 
   engineShowStream() {
-    return this.flash.showStream();
+    // eslint-disable-next-line no-underscore-dangle
+    return this.flash._show_stream();
   }
 
   flashPrepared(width, height) {

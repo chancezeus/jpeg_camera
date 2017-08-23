@@ -23,6 +23,10 @@ export default class JpegCameraHtml5 extends JpegCamera {
     this.engineInit();
   }
 
+  destruct() {
+    this.waitForVideoReadyTimer = null;
+  }
+
   engineInit() {
     this.debug('Using HTML5 engine.');
 
@@ -249,6 +253,7 @@ export default class JpegCameraHtml5 extends JpegCamera {
     return request.send();
   }
 
+  waitForVideoReadyTimer = null;
   waitForVideoReady() {
     const videoWidth = parseInt(this.video.videoWidth, 10);
     const videoHeight = parseInt(this.video.videoHeight, 10);
@@ -268,7 +273,8 @@ export default class JpegCameraHtml5 extends JpegCamera {
     }
     this.statusChecksCount++;
     const that = this;
-    return setTimeout((() => that.waitForVideoReady()), 100);
+    this.waitForVideoReadyTimer = setTimeout((() => that.waitForVideoReady()), 100);
+    return null;
   }
 
   resizeVideoBox() {

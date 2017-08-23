@@ -332,15 +332,13 @@ class JpegCamera {
   // @option options shutter [Boolean] Whether to play the shutter sound.
   //
   // @return [Snapshot] The snapshot that was taken.
-  capture(theOptions) {
-    let options = theOptions;
-    if (options == null) {
-      options = {};
+  capture(newOptions) {
+    let options = Object.assign({}, this.options);
+    if (newOptions) {
+      options = Object.assign({}, options, newOptions);
     }
     const snapshot = new __WEBPACK_IMPORTED_MODULE_0__snapshot__["a" /* default */](this, options);
     this.snapshots[snapshot.id] = snapshot;
-
-    options = snapshot.options();
 
     if (options.shutter) {
       this.enginePlayShutterSound();
@@ -921,6 +919,7 @@ const canPlay = type => {
 class JpegCameraHtml5 extends __WEBPACK_IMPORTED_MODULE_1__jpeg_camera__["b" /* default */] {
   constructor(theContainer, options) {
     super(theContainer, options);
+    this.waitForVideoReadyTimer = null;
     this.statusChecksCount = 0;
     this.vorbisAudio = 'audio/ogg; codecs=vorbis';
     this.mpegAudio = 'audio/mpeg; ';
@@ -928,6 +927,10 @@ class JpegCameraHtml5 extends __WEBPACK_IMPORTED_MODULE_1__jpeg_camera__["b" /* 
     this.videoContainer = null;
     __WEBPACK_IMPORTED_MODULE_0_auto_bind___default()(this);
     this.engineInit();
+  }
+
+  destruct() {
+    this.waitForVideoReadyTimer = null;
   }
 
   engineInit() {
@@ -1153,7 +1156,8 @@ class JpegCameraHtml5 extends __WEBPACK_IMPORTED_MODULE_1__jpeg_camera__["b" /* 
     }
     this.statusChecksCount++;
     const that = this;
-    return setTimeout(() => that.waitForVideoReady(), 100);
+    this.waitForVideoReadyTimer = setTimeout(() => that.waitForVideoReady(), 100);
+    return null;
   }
 
   resizeVideoBox() {
@@ -1244,11 +1248,17 @@ class JpegCameraHtml5 extends __WEBPACK_IMPORTED_MODULE_1__jpeg_camera__["b" /* 
 class JpegCameraFlash extends __WEBPACK_IMPORTED_MODULE_1__jpeg_camera__["b" /* default */] {
   constructor(theContainer, options) {
     super(theContainer, options);
+    this.waitForVideoReadyTimer = null;
     this.instances = {};
     this.nextId = 1;
     __WEBPACK_IMPORTED_MODULE_0_auto_bind___default()(this);
     this.engineInit();
   }
+
+  destruct() {
+    this.waitForVideoReadyTimer = null;
+  }
+
   // Used by flash object to send message to our instance.
   sendMessage(id, method, ...args) {
     const instance = this.instances[parseInt(id, 10)];
@@ -1285,7 +1295,7 @@ class JpegCameraFlash extends __WEBPACK_IMPORTED_MODULE_1__jpeg_camera__["b" /* 
       id: this.id,
       width: this.viewWidth,
       height: this.viewHeight,
-      shutter_url: this.options.shutterMp3Url
+      shutter_url: this.options.shutterMp3Url ? this.options.shutterMp3Url : ''
     };
     const that = this;
     const callback = event => {
@@ -1294,7 +1304,10 @@ class JpegCameraFlash extends __WEBPACK_IMPORTED_MODULE_1__jpeg_camera__["b" /* 
       }
       that.debug('Flash loaded.');
       that.flash = document.getElementById(flashObjectId);
-      return that.flash;
+      if (this.options.onReady) {
+        this.waitForVideoReady();
+      }
+      return null;
     };
 
     const containerToBeReplaced = document.createElement('div');
@@ -1305,15 +1318,32 @@ class JpegCameraFlash extends __WEBPACK_IMPORTED_MODULE_1__jpeg_camera__["b" /* 
     this.container.appendChild(containerToBeReplaced);
 
     // eslint-disable-next-line no-undef
-    return swfobject.embedSWF(this.options.swfUrl, containerToBeReplaced.id, this.viewWidth, this.viewHeight, '9', null, flashvars, params, attributes, callback);
+    swfobject.embedSWF(this.options.swfUrl, containerToBeReplaced.id, this.viewWidth, this.viewHeight, '9', null, flashvars, params, attributes, callback);
+  }
+
+  waitForVideoReady() {
+    try {
+      // eslint-disable-next-line no-underscore-dangle
+      if (this.flash._capture(1, false, 0.1, 1)) {
+        return this.options.onReady.call(this, null);
+      }
+    } catch (e) {}
+    // do nothing
+
+    /*
+    */
+    const that = this;
+    this.waitForVideoReadyTimer = setTimeout(() => that.waitForVideoReady(), 500);
+    return null;
   }
 
   resizePreview() {
     if (this.viewWidth < 215 || this.viewHeight < 138) {
       throw new __WEBPACK_IMPORTED_MODULE_2__errors__["a" /* WebcamError */](__WEBPACK_IMPORTED_MODULE_2__errors__["b" /* WebcamErrors */].FLASH_WINDOW_TOO_SMALL);
     }
-    this.flash.width = this.viewWidth;
-    this.flash.height = this.viewHeight;
+    this.flash.parentNode.removeChild(this.flash);
+    this.flash = null;
+    this.engineInit();
     return this;
   }
 
@@ -1347,9 +1377,10 @@ class JpegCameraFlash extends __WEBPACK_IMPORTED_MODULE_1__jpeg_camera__["b" /* 
 
   engineGetImageData(snapshot) {
     let result;
-    const flashData = this.flash.getImageData(snapshot.id);
+    // eslint-disable-next-line no-underscore-dangle
+    const flashData = this.flash._get_image_data(snapshot.id);
 
-    if (__WEBPACK_IMPORTED_MODULE_1__jpeg_camera__["b" /* default */].canvas_supported()) {
+    if (Object(__WEBPACK_IMPORTED_MODULE_1__jpeg_camera__["c" /* isCanvasSupported */])()) {
       const canvas = document.createElement('canvas');
       canvas.width = flashData.width;
       canvas.height = flashData.height;
@@ -1405,11 +1436,13 @@ class JpegCameraFlash extends __WEBPACK_IMPORTED_MODULE_1__jpeg_camera__["b" /* 
   }
 
   engineDiscard(snapshot) {
-    return this.flash.discard(snapshot.id);
+    // eslint-disable-next-line no-underscore-dangle
+    return this.flash._discard(snapshot.id);
   }
 
   engineShowStream() {
-    return this.flash.showStream();
+    // eslint-disable-next-line no-underscore-dangle
+    return this.flash._show_stream();
   }
 
   flashPrepared(width, height) {
