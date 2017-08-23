@@ -1,122 +1,145 @@
-import JpegCamera from 'jpeg_camera';
+import autoBind from 'auto-bind';
+import JpegCamera from './jpeg_camera';
+import { WebcamError, WebcamErrors } from './errors';
 
 //
 // JpegCamera implementation that uses Flash to capture and display snapshots.
 //
 // @private
 export default class JpegCameraFlash extends JpegCamera {
-  _instances = {};
-  _next_id = 1;
-
+  constructor(theContainer, options) {
+    super(theContainer, options);
+    this.instances = {};
+    this.nextId = 1;
+    autoBind(this);
+    this.engineInit();
+  }
   // Used by flash object to send message to our instance.
-  static _send_message(id, method) {
-    const instance = this._instances[parseInt(id)];
+  sendMessage(id, method, ...args) {
+    const instance = this.instances[parseInt(id, 10)];
 
-    if (!instance) { return; }
+    if (!instance) { return null; }
 
-    const args = Array.prototype.slice.call(arguments, 2);
-
-    return this.prototype[method].apply(instance, args);
+    return this.prototype[method].apply(instance, ...args);
   }
 
-  _engine_init() {
-    this._debug("Using Flash engine");
+  engineInit() {
+    this.debug('Using Flash engine');
 
     // register our instance
-    this._id = this._next_id++;
-    this._instances[this._id] = this;
+    this.id = this.nextId++;
+    this.instances[this.id] = this;
 
-    if ((this.view_width < 215) || (this.view_height < 138)) {
-      this._got_error("camera is too small to display privacy dialog");
-      return;
-    }
-
-    const flash_object_id = `flash_object_${this._id}`;
+    const flashObjectId = `flash_object_${this.id}`;
 
     const params = {
-      loop: "false",
-      allowScriptAccess: "always",
-      allowFullScreen: "false",
-      quality: "best",
-      wmode: "opaque",
-      menu: "false"
+      loop: 'false',
+      allowScriptAccess: 'always',
+      allowFullScreen: 'false',
+      quality: 'best',
+      wmode: 'opaque',
+      menu: 'false',
     };
     const attributes = {
-      id: flash_object_id,
-      align: "middle"
+      id: flashObjectId,
+      align: 'middle',
     };
     const flashvars = {
-      id: this._id,
-      width: this.view_width,
-      height: this.view_height,
-      shutter_url: this.options.shutter_mp3_url
+      id: this.id,
+      width: this.viewWidth,
+      height: this.viewHeight,
+      shutter_url: this.options.shutterMp3Url,
     };
     const that = this;
-    const callback = function(event) {
+    const callback = (event) => {
       if (!event.success) {
-        return that._got_error("Flash loading failed.");
-      } else {
-        that._debug("Flash loaded");
-        return that._flash = document.getElementById(flash_object_id);
+        throw new WebcamError(WebcamErrors.FLASH_FAILED_LOADING, event);
       }
+      that.debug('Flash loaded.');
+      that.flash = document.getElementById(flashObjectId);
+      return that.flash;
     };
 
-    const container_to_be_replaced = document.createElement("div");
-    container_to_be_replaced.id = `jpeg_camera_flash_${this._id}`;
-    container_to_be_replaced.style.width = "100%";
-    container_to_be_replaced.style.height = "100%";
+    const containerToBeReplaced = document.createElement('div');
+    containerToBeReplaced.id = `jpeg_cameraflash_${this.id}`;
+    containerToBeReplaced.style.width = '100%';
+    containerToBeReplaced.style.height = '100%';
 
-    this.container.appendChild(container_to_be_replaced);
+    this.container.appendChild(containerToBeReplaced);
 
-    return swfobject.embedSWF(this.options.swf_url, container_to_be_replaced.id,
-      this.view_width, this.view_height, '9', null, flashvars, params, attributes,
-      callback);
+    // eslint-disable-next-line no-undef
+    return swfobject.embedSWF(
+      this.options.swf_url,
+      containerToBeReplaced.id,
+      this.viewWidth,
+      this.viewHeight,
+      '9',
+      null,
+      flashvars,
+      params,
+      attributes,
+      callback,
+    );
   }
 
-  _engine_play_shutter_sound() {
-    return this._flash._play_shutter();
+  resizePreview() {
+    if ((this.viewWidth < 215) || (this.viewHeight < 138)) {
+      throw new WebcamError(WebcamErrors.FLASH_WINDOW_TOO_SMALL);
+    }
+    this.flash.width = this.viewWidth;
+    this.flash.height = this.viewHeight;
+    return this;
   }
 
-  _engine_capture(snapshot, mirror, quality, scale) {
-    return this._flash._capture(snapshot.id, mirror, quality, scale);
+  enginePlayShutterSound() {
+    // eslint-disable-next-line no-underscore-dangle
+    return this.flash._play_shutter();
   }
 
-  _engine_display(snapshot) {
-    return this._flash._display(snapshot.id);
+  engineCapture(snapshot, mirror, quality, scale) {
+    // eslint-disable-next-line no-underscore-dangle
+    return this.flash._capture(snapshot.id, mirror, quality, scale);
   }
 
-  _engine_get_canvas(snapshot) {
-    if (!snapshot._image_data) { snapshot._image_data = this._engine_get_image_data(snapshot); }
-    const canvas = document.createElement("canvas");
-    canvas.width = snapshot._image_data.width;
-    canvas.height = snapshot._image_data.height;
-    const context = canvas.getContext("2d");
-    context.putImageData(snapshot._image_data, 0, 0);
+  engineDisplay(snapshot) {
+    // eslint-disable-next-line no-underscore-dangle
+    return this.flash._display(snapshot.id);
+  }
+
+  engineGetCanvas(snapshot) {
+    // eslint-disable-next-line no-param-reassign
+    if (!snapshot.imageData) { snapshot.imageData = this.engineGetImageData(snapshot); }
+    const canvas = document.createElement('canvas');
+    canvas.width = snapshot.imageData.width;
+    canvas.height = snapshot.imageData.height;
+    const context = canvas.getContext('2d');
+    context.putImageData(snapshot.imageData, 0, 0);
     return canvas;
   }
 
-  _engine_get_image_data(snapshot) {
+  engineGetImageData(snapshot) {
     let result;
-    const flash_data = this._flash._get_image_data(snapshot.id);
+    const flashData = this.flash.getImageData(snapshot.id);
 
     if (JpegCamera.canvas_supported()) {
-      const canvas = document.createElement("canvas");
-      canvas.width = flash_data.width;
-      canvas.height = flash_data.height;
-      const context = canvas.getContext("2d");
-      result = context.createImageData(flash_data.width, flash_data.height);
+      const canvas = document.createElement('canvas');
+      canvas.width = flashData.width;
+      canvas.height = flashData.height;
+      const context = canvas.getContext('2d');
+      result = context.createImageData(flashData.width, flashData.height);
     } else {
       result = {
         data: [],
-        width: flash_data.width,
-        height: flash_data.height
+        width: flashData.width,
+        height: flashData.height,
       };
     }
 
-    for (let i = 0; i < flash_data.data.length; i++) {
-      const pixel = flash_data.data[i];
+    for (let i = 0; i < flashData.data.length; i++) {
+      const pixel = flashData.data[i];
       const index = i * 4;
 
+      /* eslint-disable no-bitwise */
       const red = (pixel >> 16) & 0xff;
       const green = (pixel >> 8) & 0xff;
       const blue = pixel & 0xff;
@@ -129,42 +152,43 @@ export default class JpegCameraFlash extends JpegCamera {
     return result;
   }
 
-  _engine_get_blob(snapshot, mime, mirror, quality, callback) {
+  engineGetBlob(snapshot, mime, mirror, quality, callback) {
     let canvas;
-    if (!snapshot._extra_canvas) { snapshot._extra_canvas = this._engine_get_canvas(snapshot); }
+    // eslint-disable-next-line no-param-reassign
+    if (!snapshot.extraCanvas) { snapshot.extraCanvas = this.engineGetCanvas(snapshot); }
 
     if (mirror) {
-      canvas = document.createElement("canvas");
-      canvas.width = snapshot._canvas.width;
-      canvas.height = snapshot._canvas.height;
+      canvas = document.createElement('canvas');
+      canvas.width = snapshot.canvas.width;
+      canvas.height = snapshot.canvas.height;
 
-      const context = canvas.getContext("2d");
+      const context = canvas.getContext('2d');
       context.setTransform(1, 0, 0, 1, 0, 0); // reset transformation matrix
       context.translate(canvas.width, 0);
       context.scale(-1, 1);
-      context.drawImage(snapshot._extra_canvas, 0, 0);
+      context.drawImage(snapshot.extraCanvas, 0, 0);
     } else {
-      canvas = snapshot._extra_canvas;
+      canvas = snapshot.extraCanvas;
     }
 
     return canvas.toBlob((blob => callback(blob)), mime, quality);
   }
 
-  _engine_discard(snapshot) {
-    return this._flash._discard(snapshot.id);
+  engineDiscard(snapshot) {
+    return this.flash.discard(snapshot.id);
   }
 
-  _engine_show_stream() {
-    return this._flash._show_stream();
+  engineShowStream() {
+    return this.flash.showStream();
   }
 
-  _flash_prepared(width, height) {
-    this._block_element_access();
+  flashPrepared(width, height) {
+    this.blockElementAccess();
 
     // XXX steal focus from the flash object
     document.body.tabIndex = 0;
     document.body.focus();
 
-    return this._prepared(width, height);
+    return this.prepared(width, height);
   }
 }

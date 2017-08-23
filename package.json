@@ -2,10 +2,25 @@
   "name": "jpeg-camera-es6",
   "version": "1.0.0",
   "author": " Kamil Tunkiewicz (original code by Adam Wróbel)",
-  "license": "SEE LICENSE.md file.",
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/ktunkiewicz/jpeg_camera"
   },
-  "main": "src/index.js"
+  "main": "dist/jpeg_camera.js",
+  "module": "dist/jpeg_camera.js",
+  "dependencies": {
+    "auto-bind": "^1.1.0",
+    "babel-core": "^6.26.0",
+    "babel-eslint": "^7.2.3",
+    "babel-loader": "^7.1.2",
+    "babel-plugin-transform-class-properties": "^6.24.1",
+    "babel-preset-es2016": "^6.24.1",
+    "babili-webpack-plugin": "^0.1.2",
+    "eslint": "^4.5.0",
+    "eslint-config-airbnb-base": "^11.3.1",
+    "eslint-import-resolver-webpack": "^0.8.3",
+    "eslint-plugin-import": "^2.7.0",
+    "webpack": "^3.5.5"
+  }
 }

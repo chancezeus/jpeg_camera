@@ -1,4 +1,6 @@
+import autoBind from 'auto-bind';
 import Stats from './stats';
+import { isCanvasSupported, addPrefixedStyle } from './jpeg_camera';
 
 // Snapshot taken using {JpegCamera}.
 export default class Snapshot {
@@ -7,46 +9,47 @@ export default class Snapshot {
   //
   // @nodoc
   // @private
-  _next_snapshot_id = 1;
+  nextSnapshotId = 1;
 
   // @nodoc
   // @private
-  _discarded = false;
+  discarded = false;
 
   // @nodoc
   // @private
-  _extra_canvas = null;
+  extraCanvas = null;
 
   // @nodoc
   // @private
-  _blob = null;
+  blob = null;
   // @nodoc
   // @private
-  _blob_mime = null;
+  blobMime = null;
 
   // @nodoc
   // @private
-  _image_data = null;
+  imageData = null;
 
   // @nodoc
   // @private
-  _stats = null;
+  stats = null;
 
   // @nodoc
   // @private
   constructor(camera, options) {
+    autoBind(this);
     this.camera = camera;
     this.options = options;
-    this.id = this._next_snapshot_id++;
+    this.id = this.nextSnapshotId++;
   }
 
   // Display the snapshot with the camera element it was taken with.
   //
   // @return [Snapshot] Self for chaining.
   show() {
-    if (this._discarded) { raise("discarded snapshot cannot be used"); }
+    if (this.discarded) { throw new Error('discarded snapshot cannot be used'); }
 
-    this.camera._display(this);
+    this.camera.display(this);
     return this;
   }
 
@@ -56,8 +59,8 @@ export default class Snapshot {
   //
   // @return [Snapshot] Self for chaining.
   hide() {
-    if (this.camera.displayed_snapshot() === this) {
-      this.camera.show_stream();
+    if (this.camera.displayedSnapshot() === this) {
+      this.camera.showStream();
     }
     return this;
   }
@@ -74,12 +77,10 @@ export default class Snapshot {
   //   as the first argument.
   //
   // @return [void]
-  get_stats(callback) {
-    if (this._discarded) { raise("discarded snapshot cannot be used"); }
+  getStats(callback) {
+    if (this.discarded) { throw new Error('discarded snapshot cannot be used'); }
 
-    return this.get_image_data(function(data) {
-      return this._get_stats(data, callback);
-    });
+    return this.getImageData(data => (this.calculateStats(data, callback)));
   }
 
   // Get canvas element showing the snapshot.
@@ -106,7 +107,7 @@ export default class Snapshot {
   // data. You can read more about mirroring in {JpegCamera#capture}.
   //
   // This method doesn't work in Internet Explorer 8 or earlier, because it does
-  // not support `canvas` element. Call {JpegCamera.canvas_supported} to learn
+  // not support `canvas` element. Call {isCanvasSupported} to learn
   // whether you can use this method.
   //
   // @param callback [Function] Function to call when `canvas` element is
@@ -114,24 +115,21 @@ export default class Snapshot {
   //   element will be passed as the first argument.
   //
   // @return [Boolean] Whether canvas is supported in this browser.
-  get_canvas(callback) {
-    if (this._discarded) { raise("discarded snapshot cannot be used"); }
+  getCanvasTimeout = null;
+  getCanvas(callback) {
+    if (this.discarded) { throw new Error('discarded snapshot cannot be used'); }
 
-    if (!JpegCamera._canvas_supported) { false; }
+    if (!isCanvasSupported()) { return false; }
 
-    // FIXME This method is supposed to always return the same object, but if
-    // you call it again before this timeout runs, a new timeout will be
-    // scheduled and new data created.
     const that = this;
-    setTimeout(function() {
-        if (!that._extra_canvas) { that._extra_canvas = that.camera._engine_get_canvas(that); }
-
-        JpegCamera._add_prefixed_style(that._extra_canvas,
-          "transform", "scalex(-1.0)");
-
-        return callback.call(that, that._extra_canvas);
-      }
-      , 1);
+    this.getCanvasTimeout = setTimeout(
+      () => {
+        if (!that.extraCanvas) { that.extraCanvas = that.camera.engineGetCanvas(that); }
+        addPrefixedStyle(that.extraCanvas, 'transform', 'scalex(-1.0)');
+        return callback.call(that, that.extraCanvas);
+      },
+      1,
+    );
     return true;
   }
 
@@ -142,7 +140,7 @@ export default class Snapshot {
   // to a server via POST call.
   //
   // This method doesn't work in Internet Explorer 8 or earlier, because it does
-  // not support `canvas` element. Call {JpegCamera.canvas_supported} to learn
+  // not support `canvas` element. Call {isCanvasSupported} to learn
   // whether you can use this method.
   //
   // Because preparing image blob can take a while this method does not return
@@ -155,35 +153,35 @@ export default class Snapshot {
   // @param callback [Function] Function to call when data is available. Snapshot
   //   object will be available as `this`, the blob object will be passed as the
   //   first argument.
-  // @param mime_type [String] Mime type of the requested blob. "image/jpeg" by
+  // @param mimeType [String] Mime type of the requested blob. "image/jpeg" by
   //   default.
   //
   // @return [Boolean] Whether canvas is supported in this browser.
-  get_blob(callback, mime_type) {
-    if (mime_type == null) { mime_type = "image/jpeg"; }
-    if (this._discarded) { raise("discarded snapshot cannot be used"); }
+  getBlobTimeout = null;
+  getBlob(callback, mimeType) {
+    let theMimeType = mimeType;
+    if (theMimeType == null) { theMimeType = 'image/jpeg'; }
+    if (this.discarded) { throw new Error('discarded snapshot cannot be used'); }
 
-    if (!JpegCamera._canvas_supported) { false; }
+    if (!isCanvasSupported()) { return false; }
 
-    // FIXME This method is supposed to always return the same object, but if
-    // you call it again before this timeout runs, a new timeout will be
-    // scheduled and new data created.
     const that = this;
-    setTimeout(function() {
-        if (that._blob_mime !== mime_type) { that._blob = null; }
-        that._blob_mime = mime_type;
-        if (that._blob) {
-          return callback.call(that, that._blob);
-        } else {
-          const { mirror } = that.options;
-          const { quality } = that.options;
-          return that.camera._engine_get_blob(that, mime_type, mirror, quality, function(b) {
-            that._blob = b;
-            return callback.call(that, that._blob);
-          });
+    this.getBlobTimeout = setTimeout(
+      () => {
+        if (that.blobMime !== theMimeType) { that.blob = null; }
+        that.blobMime = theMimeType;
+        if (that.blob) {
+          return callback.call(that, that.blob);
         }
-      }
-      , 1);
+        const { mirror } = that.options;
+        const { quality } = that.options;
+        return that.camera.engineGetBlob(that, theMimeType, mirror, quality, (b) => {
+          that.blob = b;
+          return callback.call(that, that.blob);
+        });
+      },
+      1,
+    );
     return true;
   }
 
@@ -211,7 +209,7 @@ export default class Snapshot {
   // ](https://developer.mozilla.org/en-US/docs/Web/API/ImageData) object in all
   // browsers except Internet Explorer 8 or earlier which does not support
   // the `canvas` element. In that browser a generic JavaScript object will be
-  // returned that mimics the native format. Call {JpegCamera.canvas_supported}
+  // returned that mimics the native format. Call {isCanvasSupported}
   // to learn whether `canvas` is supported by the browser.
   //
   // @param callback [Function] Function to call when data is available. Snapshot
@@ -219,18 +217,18 @@ export default class Snapshot {
   //   first argument.
   //
   // @return [void]
-  get_image_data(callback) {
-    if (this._discarded) { raise("discarded snapshot cannot be used"); }
+  getImageDataTimeout = null;
+  getImageData(callback) {
+    if (this.discarded) { throw new Error('discarded snapshot cannot be used'); }
 
-    // FIXME This method is supposed to always return the same object, but if
-    // you call it again before this timeout runs, a new timeout will be
-    // scheduled and new data created.
     const that = this;
-    setTimeout(function() {
-        if (!that._image_data) { that._image_data = that.camera._engine_get_image_data(that); }
-        return callback.call(that, that._image_data);
-      }
-      , 1);
+    this.getImageDataTimeout = setTimeout(
+      () => {
+        if (!that.imageData) { that.imageData = that.camera.engineGetImageData(that); }
+        return callback.call(that, that.imageData);
+      },
+      1,
+    );
 
     return null;
   }
@@ -242,55 +240,54 @@ export default class Snapshot {
   //
   // @return [void]
   discard() {
-    this.camera._discard(this);
-    delete this._extra_canvas;
-    delete this._image_data;
-    delete this._blob;
-    return undefined;
+    this.camera.discard(this);
+    delete this.extraCanvas;
+    delete this.imageData;
+    delete this.blob;
   }
 
   // Snapshot options
   //
   // @nodoc
   // @private
-  _options() {
-    return this.camera._extend({}, this.camera.options, this.options, this._upload_options);
+  options() {
+    return Object.assign({}, this.camera.options, this.options, this.uploadOptions);
   }
 
   // Calculate the snapshot pixel statistics given image data and call callback.
   //
   // @nodoc
   // @private
-  _get_stats(data, callback) {
-    if (!this._stats) {
+  calculateStats(data, callback) {
+    if (!this.stats) {
       let gray;
       const n = data.width * data.height;
       let sum = 0.0;
-      const gray_values = new Array(n);
+      const grayValues = new Array(n);
 
       for (let i = 0, end = n; i < end; i++) {
         const index = i * 4;
         gray =
           (0.2126 * data.data[index + 0]) + // red
           (0.7152 * data.data[index + 1]) + // green
-          (0.0722 * data.data[index + 2]);   // blue
+          (0.0722 * data.data[index + 2]); // blue
         gray = Math.round(gray);
 
         sum += gray;
-        gray_values[i] = gray;
+        grayValues[i] = gray;
       }
 
       const mean = Math.round(sum / n);
 
-      let sum_of_square_distances = 0;
-      for (gray of Array.from(gray_values)) {
-        sum_of_square_distances += Math.pow(gray - mean, 2);
-      }
+      let sumOfSquareDistances = 0;
+      grayValues.forEach((oneGray) => {
+        sumOfSquareDistances += (oneGray - mean) ** 2;
+      });
 
-      this._stats = new Stats();
-      this._stats.mean = mean;
-      this._stats.std = Math.round(Math.sqrt(sum_of_square_distances / n));
+      this.stats = new Stats();
+      this.stats.mean = mean;
+      this.stats.std = Math.round(Math.sqrt(sumOfSquareDistances / n));
     }
-    return callback.call(this, this._stats);
+    return callback.call(this, this.stats);
   }
 }

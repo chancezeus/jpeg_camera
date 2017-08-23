@@ -1,0 +1,26 @@
+{
+  "parser": "babel-eslint",
+  "extends": [
+    "airbnb-base",
+    "plugin:import/errors",
+    "plugin:import/warnings"
+  ],
+  "plugins": [
+    "import"
+  ],
+  "rules": {
+    "indent": [2],
+    "import/extensions": 0,
+    "no-plusplus": 0,
+    "class-methods-use-this": 0
+  },
+  "settings": {
+    "import/extensions": ['.js'],
+    "import/resolver": "webpack"
+  },
+  "env": {
+    "browser": true,
+    "node": true,
+    "es6": true,
+  }
+}

@@ -1,69 +1,86 @@
 import Snapshot from './snapshot';
 
+export const isCanvasSupported = () => (!!document.createElement('canvas').getContext);
+
+// Helper for setting prefixed CSS declarations.
+//
+// @nodoc
+// @private
+export const addPrefixedStyle = (theElement, style, value) => {
+  const element = theElement;
+  const uppercaseStyle = style.charAt(0).toUpperCase() + style.slice(1);
+  element.style[style] = value;
+  element.style[`Webkit${uppercaseStyle}`] = value;
+  element.style[`Moz${uppercaseStyle}`] = value;
+  element.style[`ms${uppercaseStyle}`] = value;
+  element.style[`O${uppercaseStyle}`] = value;
+
+  return element;
+};
+
 // Base class for JpegCamera implementations. Subclasses provide functionality
 // defined by this API using different engines. On supported browsers HTML5
 // implementation will be used, otherwise Flash will be used if available.
 export default class JpegCamera {
   // @nodoc
   // @private
-  DefaultOptions = {
-    shutter_ogg_url: "/jpeg_camera/shutter.ogg",
-    shutter_mp3_url: "/jpeg_camera/shutter.mp3",
-    swf_url: "/jpeg_camera/jpeg_camera.swf",
-    on_debug(message) {
+  defaultOptions = {
+    shutterOggUrl: null,
+    shutterMp3Url: null,
+    swfUrl: null,
+    onDebug(message) {
+      // eslint-disable-next-line no-console
       if (console && console.log) { return console.log(`JpegCamera: ${message}`); }
+      return null;
     },
     quality: 0.9,
     shutter: true,
     mirror: false,
-    scale: 1.0
+    scale: 1.0,
   };
 
   // @nodoc
   // @private
-  _canvas_supported = !!document.createElement('canvas').getContext;
+  isReady = false;
 
   // @nodoc
   // @private
-  _is_ready = false;
+  errorOccured = false;
 
   // @nodoc
   // @private
-  _error_occured = false;
+  statsCaptureScale = 0.2;
 
   // @nodoc
   // @private
-  StatsCaptureScale = 0.2;
+  snapshots = {};
 
   // @nodoc
   // @private
-  _snapshots = {};
+  displayedSnapshot = null;
 
   // @nodoc
   // @private
-  _displayed_snapshot = null;
+  overlay = null;
 
   // @nodoc
   // @private
-  _overlay = null;
+  viewWidth = null;
 
   // @nodoc
   // @private
-  view_width = null;
-  // @nodoc
-  // @private
-  view_height = null;
+  viewHeight = null;
 
   // Tells whether the browser supports `canvas` element and you can use
-  // {Snapshot#get_canvas} method to display snapshots outside the camera
+  // {Snapshot#getCanvas} method to display snapshots outside the camera
   // container.
   //
   // All browsers except Internet Explorer 8 and earlier support `canvas`
   // element.
   //
   // @return [Boolean] True if `canvas` is supported.
-  static canvas_supported() {
-    return this._canvas_supported;
+  canvasSupported() {
+    return isCanvasSupported();
   }
 
   // Construct new camera.
@@ -87,23 +104,19 @@ export default class JpegCamera {
   //
   // @param container [DOMElement, String] DOM element or element's ID.
   //
-  // @option options swf_url [String] URL to the SWF file that should be used
-  //   for fallback if HTML5 cannot be used. "/jpeg_camera/jpeg_camera.swf" by
+  // @option options swfUrl [String] URL to the SWF file that should be used
+  //   for fallback if HTML5 cannot be used. '/jpeg_camera/jpeg_camera.swf' by
   //   default.
-  // @option options shutter_mp3_url [String] URL to the shutter mp3 sound file.
-  //   Used by flash. "/jpeg_camera/shutter.mp3" by default.
-  // @option options shutter_ogg_url [String] URL to the shutter ogg sound file.
-  //   Used by HTML5. "/jpeg_camera/shutter.ogg" by default.
-  // @option options on_ready [Function] Function to call when camera is ready.
+  // @option options shutterMp3Url [String] URL to the shutter mp3 sound file.
+  //   Used by flash. '/jpeg_camera/shutter.mp3' by default.
+  // @option options shutterOggUrl [String] URL to the shutter ogg sound file.
+  //   Used by HTML5. '/jpeg_camera/shutter.ogg' by default.
+  // @option options onReady [Function] Function to call when camera is ready.
   //   Inside the callback camera object can be accessed as `this`. This
-  //   function will receive object with `video_width` and `video_height`
+  //   function will receive object with `videoWidth` and `videoHeight`
   //   properties as the first argument. These indicate camera's native
   //   resolution. See also {JpegCamera#ready}.
-  // @option options on_error [Function] Function to call when camera error
-  //   occurs. Error message will be passed as the first argument. Inside the
-  //   callback camera object can be accessed as `this`. See also
-  //   {JpegCamera#error}.
-  // @option options on_debug [Function] This callback can be used to log various
+  // @option options onDebug [Function] This callback can be used to log various
   //   events and information that can be useful when debugging JpegCamera. Debug
   //   message will be passed as the first argument. Inside the callback camera
   //   object can be accessed as `this`. There is a default implementation of
@@ -122,82 +135,56 @@ export default class JpegCamera {
   // @option options shutter [Boolean] Whether to play shutter sound when
   //   capturing snapshots. Can be overwritten when calling
   //   {JpegCamera#capture capture}.
-  constructor(container, options) {
-    if ("string" === typeof container) {
-      container = document.getElementById(container.replace("#", ""));
+  constructor(theContainer, options) {
+    let container = theContainer;
+    if (typeof container === 'string') {
+      container = document.getElementById(container.replace('#', ''));
     }
 
     if (!container || !container.offsetWidth) {
-      throw "JpegCamera: invalid container";
+      throw new Error('JpegCamera: invalid container');
     }
 
-    container.innerHTML = "";
+    container.innerHTML = '';
+    this.viewWidth = parseInt(container.offsetWidth, 10);
+    this.viewHeight = parseInt(container.offsetHeight, 10);
 
-    this.view_width = parseInt(container.offsetWidth, 10);
-    this.view_height = parseInt(container.offsetHeight, 10);
-
-    this.container = document.createElement("div");
-    this.container.style.width = "100%";
-    this.container.style.height = "100%";
-    this.container.style.position = "relative";
+    this.container = document.createElement('div');
+    this.container.style.width = '100%';
+    this.container.style.height = '100%';
+    this.container.style.position = 'relative';
 
     container.appendChild(this.container);
 
-    this.options = Object.assign({}, this.DefaultOptions, options);
-
-    this._engine_init();
+    this.options = Object.assign({}, this.defaultOptions, options);
   }
 
-  //
-  // Dummy _engine_init method. To be overriden by HTML5 or Flash implementation
-  //
-  _engine_init() {
-    this.error('Neither getUserMedia nor Flash are available!');
+  resize(containerWidth, containerHeight) {
+    this.viewWidth = parseInt(containerWidth, 10);
+    this.viewHeight = parseInt(containerHeight, 10);
+    this.resizePreview();
+    return this;
   }
 
   // Bind callback for camera ready event.
   //
-  // Replaces the callback set using __on_ready__ option during initialization.
+  // Replaces the callback set using __onReady__ option during initialization.
   //
   // If the event has already happened the argument will be called immediately.
   //
   // @param callback [Function] function to call when camera is ready. Camera
   //   object will be available as `this`. This function will receive object with
-  //   `video_width` and `video_height` properties as the first argument. These
+  //   `videoWidth` and `videoHeight` properties as the first argument. These
   //   indicate camera's native resolution.
   //
   // @return [JpegCamera] Self for chaining.
   ready(callback) {
-    this.options.on_ready = callback;
-    if (this.options.on_ready && this._is_ready) {
-      this.options.on_ready.call(this, {
-        video_width: this.video_width,
-        video_height: this.video_height
-      }
-      );
-    }
-    return this;
-  }
-
-  // Bind callback for camera error events.
-  //
-  // Replaces the callback set using __on_error__ option during initialization.
-  //
-  // Errors can occur if user declines camera access, flash fails to load, etc.
-  // Furthermore error event can occur even after camera was ready if for example
-  // user revokes access.
-  //
-  // If the event has already happened the argument will be called immediately.
-  //
-  // @param callback [Function] function to call when errors occur. Camera
-  //   object will be available as `this`, error message will be passed as the
-  //   first argument.
-  //
-  // @return [JpegCamera] Self for chaining.
-  error(callback) {
-    this.options.on_error = callback;
-    if (this.options.on_error && this._error_occured) {
-      this.options.on_error.call(this, this._error_occured);
+    this.options.onReady = callback;
+    if (this.options.onReady && this.isReady) {
+      this.options.onReady.call(this, {
+        videoWidth: this.videoWidth,
+        videoHeight: this.videoHeight,
+      });
     }
     return this;
   }
@@ -206,7 +193,7 @@ export default class JpegCamera {
   //
   // Can be useful to give the user hints about bad lighting. It uses full
   // capture area, but at much lower resolution. It's more efficient than taking
-  // a regular capture and calling {Snapshot#get_stats}.
+  // a regular capture and calling {Snapshot#getStats}.
   //
   // Because reading image data can take a while when Flash fallback is being
   // used this method does not return the data immediately. Instead it accepts
@@ -218,13 +205,13 @@ export default class JpegCamera {
   //   as the first argument.
   //
   // @return [void]
-  get_stats(callback) {
+  getStats(callback) {
     const snapshot = new Snapshot(this, {});
 
-    this._engine_capture(snapshot, false, 0.1, JpegCamera.StatsCaptureScale);
+    this.engineCapture(snapshot, false, 0.1, this.statsCaptureScale);
 
     const that = this;
-    return snapshot.get_stats(stats => callback.call(that, stats));
+    return snapshot.getStats(stats => callback.call(that, stats));
   }
 
   // Capture camera snapshot.
@@ -248,21 +235,22 @@ export default class JpegCamera {
   // @option options shutter [Boolean] Whether to play the shutter sound.
   //
   // @return [Snapshot] The snapshot that was taken.
-  capture(options) {
+  capture(theOptions) {
+    let options = theOptions;
     if (options == null) { options = {}; }
     const snapshot = new Snapshot(this, options);
-    this._snapshots[snapshot.id] = snapshot;
+    this.snapshots[snapshot.id] = snapshot;
 
-    const _options = snapshot._options();
+    options = snapshot.options();
 
-    if (_options.shutter) {
-      this._engine_play_shutter_sound();
+    if (options.shutter) {
+      this.enginePlayShutterSound();
     }
 
-    let scale = Math.min(1.0, _options.scale);
+    let scale = Math.min(1.0, options.scale);
     scale = Math.max(0.01, scale);
 
-    this._engine_capture(snapshot, _options.mirror, _options.quality, scale);
+    this.engineCapture(snapshot, options.mirror, options.quality, scale);
 
     return snapshot;
   }
@@ -270,25 +258,26 @@ export default class JpegCamera {
   // Hide currently displayed snapshot and show the video stream.
   //
   // @return [JpegCamera] Self for chaining.
-  show_stream() {
-    this._engine_show_stream();
-    this._displayed_snapshot = null;
+  showStream() {
+    this.engineShowStream();
+    this.displayedSnapshot = null;
     return this;
   }
 
   // Discard all snapshots and show video stream.
   //
   // @return [JpegCamera] Self for chaining.
-  discard_all() {
-    if (this._displayed_snapshot) {
-      this.show_stream();
+  discardAll() {
+    if (this.displayedSnapshot) {
+      this.showStream();
     }
-    for (let id in this._snapshots) {
-      const snapshot = this._snapshots[id];
-      this._engine_discard(snapshot);
-      snapshot._discarded = true;
-    }
-    this._snapshots = {};
+    Object.keys(this.spanshots).map((id) => {
+      const snapshot = this.snapshots[id];
+      this.engineDiscard(snapshot);
+      snapshot.discarded = true;
+      return null;
+    });
+    this.snapshots = {};
     return this;
   }
 
@@ -296,42 +285,45 @@ export default class JpegCamera {
   //
   // @nodoc
   // @private
-  _debug(message) {
-    if (this.options.on_debug) { return this.options.on_debug.call(this, message); }
+  debug(message) {
+    if (this.options.onDebug) { return this.options.onDebug.call(this, message); }
+    return null;
   }
 
   // @nodoc
   // @private
-  _display(snapshot) {
-    this._engine_display(snapshot);
-    return this._displayed_snapshot = snapshot;
+  display(snapshot) {
+    this.engineDisplay(snapshot);
+    this.displayedSnapshot = snapshot;
+    return this.displayedSnapshot;
   }
 
   // @nodoc
   // @private
-  _discard(snapshot) {
-    if (this._displayed_snapshot === snapshot) {
-      this.show_stream();
+  discard(snapshot) {
+    if (this.displayedSnapshot === snapshot) {
+      this.showStream();
     }
-    this._engine_discard(snapshot);
-    snapshot._discarded = true;
-    return delete this._snapshots[snapshot.id];
+    this.engineDiscard(snapshot);
+    // eslint-disable-next-line no-param-reassign
+    snapshot.discarded = true;
+    return delete this.snapshots[snapshot.id];
   }
 
   // Called by the engine when camera is ready.
   //
   // @nodoc
   // @private
-  _prepared(video_width, video_height) {
-    this.video_width = video_width;
-    this.video_height = video_height;
+  prepared(videoWidth, videoHeight) {
+    this.videoWidth = videoWidth;
+    this.videoHeight = videoHeight;
 
-    this._debug(`Camera resolution ${this.video_width}x${this.video_height}px`);
+    this.debug(`Camera resolution ${this.videoWidth}x${this.videoHeight}px`);
 
     // XXX Since this method is called from inside the Flash object, we need to
     // return control to make flash object usable again.
     const that = this;
-    return setTimeout((() => that._wait_until_stream_looks_ok(true)), 1);
+    return setTimeout((() => that.waitUntilStreamLooksOk(true)), 1);
   }
 
   // This peaks into the video stream using very small rendering and calculates
@@ -340,44 +332,29 @@ export default class JpegCamera {
   //
   // @nodoc
   // @private
-  _wait_until_stream_looks_ok(show_debug) {
-    return this.get_stats(function(stats) {
+  waitUntilStreamLooksOk(showDebug) {
+    return this.getStats((stats) => {
       if (stats.std > 2) {
-        this._debug(`Stream mean gray value = ${stats.mean}` +
-          " standard deviation = " + stats.std
-        );
-        this._debug("Camera is ready");
+        this.debug(`Stream mean gray value = ${stats.mean} standard deviation = ${stats.std}`);
+        this.debug('Camera is ready');
 
-        this._is_ready = true;
-        if (this.options.on_ready) {
-          return this.options.on_ready.call(this, {
-            video_width: this.video_width,
-            video_height: this.video_height
-          }
-          );
+        this.isReady = true;
+        if (this.options.onReady) {
+          return this.options.onReady.call(this, {
+            videoWidth: this.videoWidth,
+            videoHeight: this.videoHeight,
+          });
         }
       } else {
-        if (show_debug) {
-          this._debug(`Stream mean gray value = ${stats.mean}` +
-            " standard deviation = " + stats.std
-          );
+        if (showDebug) {
+          this.debug(`Stream mean gray value = ${stats.mean} standard deviation = ${stats.std}`);
         }
         const that = this;
-        return setTimeout((() => that._wait_until_stream_looks_ok(false)), 100);
+        return setTimeout((() => that.waitUntilStreamLooksOk(false)), 100);
       }
-    });
-  }
 
-  // Called by the engine when error occurs.
-  //
-  // @nodoc
-  // @private
-  _got_error(error) {
-    this._debug(`Error - ${error}`);
-    this._error_occured = error;
-    if (this.options.on_error) {
-      return this.options.on_error.call(this, this._error_occured);
-    }
+      return null;
+    });
   }
 
   // Shows an overlay over the container to block mouse access.
@@ -388,28 +365,15 @@ export default class JpegCamera {
   //
   // @nodoc
   // @private
-  _block_element_access() {
-    this._overlay = document.createElement("div");
-    this._overlay.style.width = "100%";
-    this._overlay.style.height = "100%";
-    this._overlay.style.position = "absolute";
-    this._overlay.style.top = 0;
-    this._overlay.style.left = 0;
-    this._overlay.style.zIndex = 2;
+  blockElementAccess() {
+    this.overlay = document.createElement('div');
+    this.overlay.style.width = '100%';
+    this.overlay.style.height = '100%';
+    this.overlay.style.position = 'absolute';
+    this.overlay.style.top = 0;
+    this.overlay.style.left = 0;
+    this.overlay.style.zIndex = 2;
 
-    return this.container.appendChild(this._overlay);
-  }
-
-  // Helper for setting prefixed CSS declarations.
-  //
-  // @nodoc
-  // @private
-  static _add_prefixed_style(element, style, value) {
-    const uppercase_style = style.charAt(0).toUpperCase() + style.slice(1);
-    element.style[style] = value;
-    element.style[`Webkit${uppercase_style}`] = value;
-    element.style[`Moz${uppercase_style}`] = value;
-    element.style[`ms${uppercase_style}`] = value;
-    return element.style[`O${uppercase_style}`] = value;
+    return this.container.appendChild(this.overlay);
   }
 }

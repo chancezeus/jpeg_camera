@@ -9,24 +9,24 @@ if (!navigator.getUserMedia) {
 
 if (!window.AudioContext) { window.AudioContext = window.webkitAudioContext; }
 
-let impl = JpegCamera;
+const exports = { JpegCamera };
 
 // Use HTML5 version
-if (navigator.getUserMedia) {
-  const canvas = document.createElement("canvas");
+if (!navigator.getUserMedia) {
+  const canvas = document.createElement('canvas');
   if (canvas.getContext && !canvas.toBlob) {
-    throw "JpegCamera: Canvas-to-Blob is not loaded";
+    throw new Error('JpegCamera: Canvas-to-Blob is not loaded');
   }
-  impl = JpegCameraHtml5;
+  exports.JpegCamera = JpegCameraHtml5;
 
 // Use Flash version
 } else {
   if (!window.swfobject) {
-    throw "JpegCamera: SWFObject is not loaded";
+    throw new Error('JpegCamera: SWFObject is not loaded');
   }
-  if (window.swfobject && swfobject.hasFlashPlayerVersion('9')) {
-    impl = JpegCameraFlash;
+  if (window.swfobject && window.swfobject.hasFlashPlayerVersion('9')) {
+    exports.JpegCamera = JpegCameraFlash;
   }
 }
 
-export default impl;
+export default exports.JpegCamera;
