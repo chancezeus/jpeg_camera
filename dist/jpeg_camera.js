@@ -1305,7 +1305,7 @@ class JpegCameraFlash extends __WEBPACK_IMPORTED_MODULE_1__jpeg_camera__["b" /* 
     this.container.appendChild(containerToBeReplaced);
 
     // eslint-disable-next-line no-undef
-    return swfobject.embedSWF(this.options.swf_url, containerToBeReplaced.id, this.viewWidth, this.viewHeight, '9', null, flashvars, params, attributes, callback);
+    return swfobject.embedSWF(this.options.swfUrl, containerToBeReplaced.id, this.viewWidth, this.viewHeight, '9', null, flashvars, params, attributes, callback);
   }
 
   resizePreview() {
@@ -1444,12 +1444,12 @@ class WebcamError {
 
 
 const WebcamErrors = {
-  UNKNOWN_ERROR: 1,
-  GET_MEDIA_FAILED_INIT: 2,
-  FLASH_FAILED_LOADING: 3,
-  FLASH_WINDOW_TOO_SMALL: 4,
-  CAMERA_NOT_READY: 5,
-  GENERIC_ERROR: 99
+  UNKNOWN_ERROR: 'UNKNOWN_ERROR',
+  GET_MEDIA_FAILED_INIT: 'GET_MEDIA_FAILED_INIT',
+  FLASH_FAILED_LOADING: 'FLASH_FAILED_LOADING',
+  FLASH_WINDOW_TOO_SMALL: 'FLASH_WINDOW_TOO_SMALL',
+  CAMERA_NOT_READY: 'CAMERA_NOT_READY',
+  GENERIC_ERROR: 'GENERIC_ERROR'
 };
 /* harmony export (immutable) */ __webpack_exports__["b"] = WebcamErrors;
 

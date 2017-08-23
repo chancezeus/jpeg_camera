@@ -69,7 +69,7 @@ export default class JpegCameraFlash extends JpegCamera {
 
     // eslint-disable-next-line no-undef
     return swfobject.embedSWF(
-      this.options.swf_url,
+      this.options.swfUrl,
       containerToBeReplaced.id,
       this.viewWidth,
       this.viewHeight,
