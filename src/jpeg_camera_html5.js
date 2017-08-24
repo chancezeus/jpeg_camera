@@ -194,25 +194,6 @@ export default class JpegCameraHtml5 extends JpegCamera {
     return context.getImageData(0, 0, canvas.width, canvas.height);
   }
 
-  engineGetBlob(snapshot, mime, mirror, quality, callback) {
-    let canvas;
-    if (mirror) {
-      canvas = document.createElement('canvas');
-      canvas.width = snapshot.canvas.width;
-      canvas.height = snapshot.canvas.height;
-
-      const context = canvas.getContext('2d');
-      context.setTransform(1, 0, 0, 1, 0, 0); // reset transformation matrix
-      context.translate(canvas.width, 0);
-      context.scale(-1, 1);
-      context.drawImage(snapshot.canvas, 0, 0);
-    } else {
-      canvas = snapshot.canvas;
-    }
-
-    return canvas.toBlob((blob => callback(blob)), mime, quality);
-  }
-
   engineDiscard(snapshot) {
     // eslint-disable-next-line no-param-reassign
     return delete snapshot.canvas;

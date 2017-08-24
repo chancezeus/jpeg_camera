@@ -12,11 +12,7 @@ if (!window.AudioContext) { window.AudioContext = window.webkitAudioContext; }
 const exports = { JpegCamera };
 
 // Use HTML5 version
-if (!navigator.getUserMedia) {
-  const canvas = document.createElement('canvas');
-  if (canvas.getContext && !canvas.toBlob) {
-    throw new Error('JpegCamera: Canvas-to-Blob is not loaded');
-  }
+if (navigator.getUserMedia) {
   exports.JpegCamera = JpegCameraHtml5;
 
 // Use Flash version
