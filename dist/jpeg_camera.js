@@ -552,6 +552,10 @@ const exports = { JpegCamera: __WEBPACK_IMPORTED_MODULE_0__jpeg_camera__["b" /* 
 
 // Use HTML5 version
 if (navigator.getUserMedia) {
+  const canvas = document.createElement('canvas');
+  if (canvas.getContext && !canvas.toBlob) {
+    throw new Error('JpegCamera: Canvas-to-Blob is not loaded');
+  }
   exports.JpegCamera = __WEBPACK_IMPORTED_MODULE_1__jpeg_camera_html5__["a" /* default */];
 
   // Use Flash version
@@ -592,13 +596,20 @@ class Snapshot {
 
   // @nodoc
   // @private
+
+
+  // @nodoc
+  // @private
   constructor(camera, options) {
     this.nextSnapshotId = 1;
     this.discarded = false;
     this.extraCanvas = null;
+    this.blob = null;
+    this.blobMime = null;
     this.imageData = null;
     this.stats = null;
     this.getCanvasTimeout = null;
+    this.getBlobTimeout = null;
     this.getImageDataTimeout = null;
 
     __WEBPACK_IMPORTED_MODULE_0_auto_bind___default()(this);
@@ -611,6 +622,9 @@ class Snapshot {
   //
   // @return [Snapshot] Self for chaining.
 
+
+  // @nodoc
+  // @private
 
   // @nodoc
   // @private
@@ -714,6 +728,63 @@ class Snapshot {
       }
       Object(__WEBPACK_IMPORTED_MODULE_2__jpeg_camera__["a" /* addPrefixedStyle */])(that.extraCanvas, 'transform', 'scalex(-1.0)');
       return callback.call(that, that.extraCanvas);
+    }, 1);
+    return true;
+  }
+
+  // Get the file that would be uploaded to the server as a Blob object.
+  //
+  // This can be useful if you want to stream the data via a websocket. Note that
+  // using `upload` is more efficient if all you want to do is upload this file
+  // to a server via POST call.
+  //
+  // This method doesn't work in Internet Explorer 8 or earlier, because it does
+  // not support `canvas` element. Call {isCanvasSupported} to learn
+  // whether you can use this method.
+  //
+  // Because preparing image blob can take a while this method does not return
+  // the data immediately. Instead it accepts a callback that later will be
+  // called with the data object as an argument. Snapshot will be available as
+  // `this`.
+  //
+  // Multiple calls to this method will yield the same data object.
+  //
+  // @param callback [Function] Function to call when data is available. Snapshot
+  //   object will be available as `this`, the blob object will be passed as the
+  //   first argument.
+  // @param mimeType [String] Mime type of the requested blob. "image/jpeg" by
+  //   default.
+  //
+  // @return [Boolean] Whether canvas is supported in this browser.
+
+  getBlob(callback, mimeType) {
+    let theMimeType = mimeType;
+    if (theMimeType == null) {
+      theMimeType = 'image/jpeg';
+    }
+    if (this.discarded) {
+      throw new Error('discarded snapshot cannot be used');
+    }
+
+    if (!Object(__WEBPACK_IMPORTED_MODULE_2__jpeg_camera__["c" /* isCanvasSupported */])()) {
+      return false;
+    }
+
+    const that = this;
+    this.getBlobTimeout = setTimeout(() => {
+      if (that.blobMime !== theMimeType) {
+        that.blob = null;
+      }
+      that.blobMime = theMimeType;
+      if (that.blob) {
+        return callback.call(that, that.blob);
+      }
+      const { mirror } = that.options;
+      const { quality } = that.options;
+      return that.camera.engineGetBlob(that, theMimeType, mirror, quality, b => {
+        that.blob = b;
+        return callback.call(that, that.blob);
+      });
     }, 1);
     return true;
   }
@@ -1039,6 +1110,25 @@ class JpegCameraHtml5 extends __WEBPACK_IMPORTED_MODULE_1__jpeg_camera__["b" /* 
     return context.getImageData(0, 0, canvas.width, canvas.height);
   }
 
+  engineGetBlob(snapshot, mime, mirror, quality, callback) {
+    let canvas;
+    if (mirror) {
+      canvas = document.createElement('canvas');
+      canvas.width = snapshot.canvas.width;
+      canvas.height = snapshot.canvas.height;
+
+      const context = canvas.getContext('2d');
+      context.setTransform(1, 0, 0, 1, 0, 0); // reset transformation matrix
+      context.translate(canvas.width, 0);
+      context.scale(-1, 1);
+      context.drawImage(snapshot.canvas, 0, 0);
+    } else {
+      canvas = snapshot.canvas;
+    }
+
+    return canvas.toBlob(blob => callback(blob), mime, quality);
+  }
+
   engineDiscard(snapshot) {
     // eslint-disable-next-line no-param-reassign
     return delete snapshot.canvas;
@@ -1348,6 +1438,30 @@ class JpegCameraFlash extends __WEBPACK_IMPORTED_MODULE_1__jpeg_camera__["b" /* 
       result.data[index + 3] = 255;
     }
     return result;
+  }
+
+  engineGetBlob(snapshot, mime, mirror, quality, callback) {
+    let canvas;
+    // eslint-disable-next-line no-param-reassign
+    if (!snapshot.extraCanvas) {
+      snapshot.extraCanvas = this.engineGetCanvas(snapshot);
+    }
+
+    if (mirror) {
+      canvas = document.createElement('canvas');
+      canvas.width = snapshot.canvas.width;
+      canvas.height = snapshot.canvas.height;
+
+      const context = canvas.getContext('2d');
+      context.setTransform(1, 0, 0, 1, 0, 0); // reset transformation matrix
+      context.translate(canvas.width, 0);
+      context.scale(-1, 1);
+      context.drawImage(snapshot.extraCanvas, 0, 0);
+    } else {
+      canvas = snapshot.extraCanvas;
+    }
+
+    return canvas.toBlob(blob => callback(blob), mime, quality);
   }
 
   engineDiscard(snapshot) {

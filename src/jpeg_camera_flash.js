@@ -179,6 +179,28 @@ export default class JpegCameraFlash extends JpegCamera {
     return result;
   }
 
+  engineGetBlob(snapshot, mime, mirror, quality, callback) {
+    let canvas;
+    // eslint-disable-next-line no-param-reassign
+    if (!snapshot.extraCanvas) { snapshot.extraCanvas = this.engineGetCanvas(snapshot); }
+
+    if (mirror) {
+      canvas = document.createElement('canvas');
+      canvas.width = snapshot.canvas.width;
+      canvas.height = snapshot.canvas.height;
+
+      const context = canvas.getContext('2d');
+      context.setTransform(1, 0, 0, 1, 0, 0); // reset transformation matrix
+      context.translate(canvas.width, 0);
+      context.scale(-1, 1);
+      context.drawImage(snapshot.extraCanvas, 0, 0);
+    } else {
+      canvas = snapshot.extraCanvas;
+    }
+
+    return canvas.toBlob((blob => callback(blob)), mime, quality);
+  }
+
   engineDiscard(snapshot) {
     // eslint-disable-next-line no-underscore-dangle
     return this.flash._discard(snapshot.id);

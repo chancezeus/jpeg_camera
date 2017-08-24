@@ -13,6 +13,10 @@ const exports = { JpegCamera };
 
 // Use HTML5 version
 if (navigator.getUserMedia) {
+  const canvas = document.createElement('canvas');
+  if (canvas.getContext && !canvas.toBlob) {
+    throw new Error('JpegCamera: Canvas-to-Blob is not loaded');
+  }
   exports.JpegCamera = JpegCameraHtml5;
 
 // Use Flash version

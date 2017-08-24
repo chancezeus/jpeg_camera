@@ -21,6 +21,13 @@ export default class Snapshot {
 
   // @nodoc
   // @private
+  blob = null;
+  // @nodoc
+  // @private
+  blobMime = null;
+
+  // @nodoc
+  // @private
   imageData = null;
 
   // @nodoc
@@ -120,6 +127,58 @@ export default class Snapshot {
         if (!that.extraCanvas) { that.extraCanvas = that.camera.engineGetCanvas(that); }
         addPrefixedStyle(that.extraCanvas, 'transform', 'scalex(-1.0)');
         return callback.call(that, that.extraCanvas);
+      },
+      1,
+    );
+    return true;
+  }
+
+  // Get the file that would be uploaded to the server as a Blob object.
+  //
+  // This can be useful if you want to stream the data via a websocket. Note that
+  // using `upload` is more efficient if all you want to do is upload this file
+  // to a server via POST call.
+  //
+  // This method doesn't work in Internet Explorer 8 or earlier, because it does
+  // not support `canvas` element. Call {isCanvasSupported} to learn
+  // whether you can use this method.
+  //
+  // Because preparing image blob can take a while this method does not return
+  // the data immediately. Instead it accepts a callback that later will be
+  // called with the data object as an argument. Snapshot will be available as
+  // `this`.
+  //
+  // Multiple calls to this method will yield the same data object.
+  //
+  // @param callback [Function] Function to call when data is available. Snapshot
+  //   object will be available as `this`, the blob object will be passed as the
+  //   first argument.
+  // @param mimeType [String] Mime type of the requested blob. "image/jpeg" by
+  //   default.
+  //
+  // @return [Boolean] Whether canvas is supported in this browser.
+  getBlobTimeout = null;
+  getBlob(callback, mimeType) {
+    let theMimeType = mimeType;
+    if (theMimeType == null) { theMimeType = 'image/jpeg'; }
+    if (this.discarded) { throw new Error('discarded snapshot cannot be used'); }
+
+    if (!isCanvasSupported()) { return false; }
+
+    const that = this;
+    this.getBlobTimeout = setTimeout(
+      () => {
+        if (that.blobMime !== theMimeType) { that.blob = null; }
+        that.blobMime = theMimeType;
+        if (that.blob) {
+          return callback.call(that, that.blob);
+        }
+        const { mirror } = that.options;
+        const { quality } = that.options;
+        return that.camera.engineGetBlob(that, theMimeType, mirror, quality, (b) => {
+          that.blob = b;
+          return callback.call(that, that.blob);
+        });
       },
       1,
     );
