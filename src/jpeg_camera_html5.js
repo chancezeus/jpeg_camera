@@ -1,5 +1,5 @@
 import autoBind from 'auto-bind';
-import JpegCamera, { addPrefixedStyle } from './jpeg_camera';
+import JpegCameraBase, { addPrefixedStyle } from './jpeg_camera';
 import { WebcamError, WebcamErrors } from './errors';
 
 const canPlay = (type) => {
@@ -8,10 +8,10 @@ const canPlay = (type) => {
 };
 
 // JpegCamera implementation that uses _getUserMedia_ to capture snapshots,
-// canvas_element_ to display them and optionally _Web_Audio_API_ to play shutter sound.
+// _canvas_element_ to display them and optionally _Web_Audio_API_ to play shutter sound.
 //
 // @private
-export default class JpegCameraHtml5 extends JpegCamera {
+export default class JpegCameraHtml5 extends JpegCameraBase {
   constructor(theContainer, options) {
     super(theContainer, options);
     this.statusChecksCount = 0;
@@ -27,6 +27,18 @@ export default class JpegCameraHtml5 extends JpegCamera {
     this.waitForVideoReadyTimer = null;
   }
 
+  static engineCheck = (success, failure) => {
+    const canvas = document.createElement('canvas');
+    if (canvas.getContext && !canvas.toBlob) {
+      failure('JpegCamera: Canvas-to-Blob is not loaded');
+    }
+    try {
+      navigator.getUserMedia({ video: true }, success, failure);
+    } catch (err) {
+      failure('getUserMedia could not be initialised.', err);
+    }
+  }
+
   engineInit() {
     this.debug('Using HTML5 engine.');
 
@@ -39,9 +51,8 @@ export default class JpegCameraHtml5 extends JpegCamera {
     this.message.style.textAlign = 'center';
     this.message.style.position = 'absolute';
     this.message.style.zIndex = 3;
-    this.message.innerHTML =
-      'Please allow camera access when prompted by the browser.<br><br>' +
-      'Look for camera icon around your address bar.';
+    this.message.innerHTML = this.options.accessMessage;
+
     this.container.appendChild(this.message);
 
     this.videoContainer = document.createElement('div');
@@ -54,7 +65,7 @@ export default class JpegCameraHtml5 extends JpegCamera {
 
     this.video = document.createElement('video');
     this.video.autoplay = true;
-    addPrefixedStyle(this.video, 'transform', 'scalex(-1.0)');
+    if (this.options.previewMirror) addPrefixedStyle(this.video, 'transform', 'scalex(-1.0)');
 
     if (window.AudioContext) {
       if (canPlay(this.vorbisAudio)) {
@@ -80,6 +91,7 @@ export default class JpegCameraHtml5 extends JpegCamera {
           { minWidth: 360 },
         ],
       },
+      audio: false,
     };
 
     const success =
@@ -173,8 +185,7 @@ export default class JpegCameraHtml5 extends JpegCamera {
     this.displayedcanvas.style.left = 0;
     this.displayedcanvas.style.position = 'absolute';
     this.displayedcanvas.style.zIndex = 2;
-    addPrefixedStyle(this.displayedcanvas,
-      'transform', 'scalex(-1.0)');
+    if (this.options.previewMirror) addPrefixedStyle(this.displayedcanvas, 'transform', 'scalex(-1.0)');
 
     return this.container.appendChild(this.displayedcanvas);
   }

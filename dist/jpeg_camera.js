@@ -75,10 +75,29 @@ return /******/ (function(modules) { // webpackBootstrap
 /************************************************************************/
 /******/ ([
 /* 0 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+module.exports = self => {
+	for (const key of Object.getOwnPropertyNames(self.constructor.prototype)) {
+		const val = self[key];
+
+		if (key !== 'constructor' && typeof val === 'function') {
+			self[key] = val.bind(self);
+		}
+	}
+
+	return self;
+};
+
+
+/***/ }),
+/* 1 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__snapshot__ = __webpack_require__(4);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__snapshot__ = __webpack_require__(5);
 
 
 const isCanvasSupported = () => !!document.createElement('canvas').getContext;
@@ -106,7 +125,7 @@ const addPrefixedStyle = (theElement, style, value) => {
 // Base class for JpegCamera implementations. Subclasses provide functionality
 // defined by this API using different engines. On supported browsers HTML5
 // implementation will be used, otherwise Flash will be used if available.
-class JpegCamera {
+class JpegCameraBase {
 
   // Tells whether the browser supports `canvas` element and you can use
   // {Snapshot#getCanvas} method to display snapshots outside the camera
@@ -222,7 +241,9 @@ class JpegCamera {
       quality: 0.9,
       shutter: true,
       mirror: false,
-      scale: 1.0
+      previewMirror: true,
+      scale: 1.0,
+      accessMessage: 'Please allow camera access when prompted by the browser.<br><br>' + 'Look for camera icon around your address bar.'
     };
     this.isReady = false;
     this.errorOccured = false;
@@ -274,7 +295,7 @@ class JpegCamera {
   //   `videoWidth` and `videoHeight` properties as the first argument. These
   //   indicate camera's native resolution.
   //
-  // @return [JpegCamera] Self for chaining.
+  // @return [JpegCameraBase] Self for chaining.
   ready(callback) {
     this.options.onReady = callback;
     if (this.options.onReady && this.isReady) {
@@ -354,7 +375,7 @@ class JpegCamera {
 
   // Hide currently displayed snapshot and show the video stream.
   //
-  // @return [JpegCamera] Self for chaining.
+  // @return [JpegCameraBase] Self for chaining.
   showStream() {
     this.engineShowStream();
     this.displayedSnapshot = null;
@@ -363,7 +384,7 @@ class JpegCamera {
 
   // Discard all snapshots and show video stream.
   //
-  // @return [JpegCamera] Self for chaining.
+  // @return [JpegCameraBase] Self for chaining.
   discardAll() {
     if (this.displayedSnapshot) {
       this.showStream();
@@ -476,26 +497,7 @@ class JpegCamera {
     return this.container.appendChild(this.overlay);
   }
 }
-/* harmony export (immutable) */ __webpack_exports__["b"] = JpegCamera;
-
-
-/***/ }),
-/* 1 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-module.exports = self => {
-	for (const key of Object.getOwnPropertyNames(self.constructor.prototype)) {
-		const val = self[key];
-
-		if (key !== 'constructor' && typeof val === 'function') {
-			self[key] = val.bind(self);
-		}
-	}
-
-	return self;
-};
+/* harmony export (immutable) */ __webpack_exports__["b"] = JpegCameraBase;
 
 
 /***/ }),
@@ -522,7 +524,8 @@ const WebcamErrors = {
   FLASH_FAILED_LOADING: 'FLASH_FAILED_LOADING',
   FLASH_WINDOW_TOO_SMALL: 'FLASH_WINDOW_TOO_SMALL',
   CAMERA_NOT_READY: 'CAMERA_NOT_READY',
-  GENERIC_ERROR: 'GENERIC_ERROR'
+  GENERIC_ERROR: 'GENERIC_ERROR',
+  NO_GET_MEDIA_NOR_FLASH_AVAILABLE: 'NO_GET_MEDIA_NOR_FLASH_AVAILABLE'
 };
 /* harmony export (immutable) */ __webpack_exports__["b"] = WebcamErrors;
 
@@ -533,9 +536,9 @@ const WebcamErrors = {
 
 "use strict";
 Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__jpeg_camera__ = __webpack_require__(0);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__jpeg_camera_html5__ = __webpack_require__(6);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__jpeg_camera_flash__ = __webpack_require__(7);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__jpeg_camera_html5__ = __webpack_require__(4);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__jpeg_camera_flash__ = __webpack_require__(7);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__errors__ = __webpack_require__(2);
 
 
 
@@ -543,42 +546,389 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 if (!navigator.getUserMedia) {
   navigator.getUserMedia = navigator.webkitGetUserMedia || navigator.mozGetUserMedia || navigator.msGetUserMedia;
 }
-
 if (!window.AudioContext) {
   window.AudioContext = window.webkitAudioContext;
 }
 
-const exports = { JpegCamera: __WEBPACK_IMPORTED_MODULE_0__jpeg_camera__["b" /* default */] };
+const JpegCamera = (container, options) => {
+  const html5Init = () => new __WEBPACK_IMPORTED_MODULE_0__jpeg_camera_html5__["a" /* default */](container, options);
+  const flashInit = () => new __WEBPACK_IMPORTED_MODULE_1__jpeg_camera_flash__["a" /* default */](container, options);
+  const initError = () => new __WEBPACK_IMPORTED_MODULE_2__errors__["a" /* WebcamError */](__WEBPACK_IMPORTED_MODULE_2__errors__["b" /* WebcamErrors */].NO_GET_MEDIA_NOR_FLASH_AVAILABLE);
 
-// Use HTML5 version
-if (navigator.getUserMedia) {
-  const canvas = document.createElement('canvas');
-  if (canvas.getContext && !canvas.toBlob) {
-    throw new Error('JpegCamera: Canvas-to-Blob is not loaded');
-  }
-  exports.JpegCamera = __WEBPACK_IMPORTED_MODULE_1__jpeg_camera_html5__["a" /* default */];
+  __WEBPACK_IMPORTED_MODULE_0__jpeg_camera_html5__["a" /* default */].engineCheck(
+  /* success */() => {
+    if (options.onInit) options.onInit(html5Init());
+  },
+  /* failure */() => {
+    __WEBPACK_IMPORTED_MODULE_1__jpeg_camera_flash__["a" /* default */].engineCheck(
+    /* success */() => {
+      if (options.onInit) options.onInit(flashInit());
+    },
+    /* failure */() => {
+      if (options.onError) options.onError(initError());
+    });
+  });
+};
 
-  // Use Flash version
-} else {
-  if (!window.swfobject) {
-    throw new Error('JpegCamera: SWFObject is not loaded');
-  }
-  if (window.swfobject && window.swfobject.hasFlashPlayerVersion('9')) {
-    exports.JpegCamera = __WEBPACK_IMPORTED_MODULE_2__jpeg_camera_flash__["a" /* default */];
-  }
-}
-
-/* harmony default export */ __webpack_exports__["default"] = (exports.JpegCamera);
+/* harmony default export */ __webpack_exports__["default"] = (JpegCamera);
 
 /***/ }),
 /* 4 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0_auto_bind__ = __webpack_require__(1);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0_auto_bind__ = __webpack_require__(0);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_0_auto_bind___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_0_auto_bind__);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__stats__ = __webpack_require__(5);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__jpeg_camera__ = __webpack_require__(0);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__jpeg_camera__ = __webpack_require__(1);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__errors__ = __webpack_require__(2);
+
+
+
+
+const canPlay = type => {
+  const elem = document.createElement('video');
+  return !!(elem.canPlayType && elem.canPlayType(type).replace(/no/, ''));
+};
+
+// JpegCamera implementation that uses _getUserMedia_ to capture snapshots,
+// _canvas_element_ to display them and optionally _Web_Audio_API_ to play shutter sound.
+//
+// @private
+class JpegCameraHtml5 extends __WEBPACK_IMPORTED_MODULE_1__jpeg_camera__["b" /* default */] {
+  constructor(theContainer, options) {
+    super(theContainer, options);
+    this.waitForVideoReadyTimer = null;
+    this.statusChecksCount = 0;
+    this.vorbisAudio = 'audio/ogg; codecs=vorbis';
+    this.mpegAudio = 'audio/mpeg; ';
+    this.message = null;
+    this.videoContainer = null;
+    __WEBPACK_IMPORTED_MODULE_0_auto_bind___default()(this);
+    this.engineInit();
+  }
+
+  destruct() {
+    this.waitForVideoReadyTimer = null;
+  }
+
+  engineInit() {
+    this.debug('Using HTML5 engine.');
+
+    this.message = document.createElement('div');
+    this.message.class = 'message';
+    this.message.style.width = '100%';
+    this.message.style.height = '100%';
+    Object(__WEBPACK_IMPORTED_MODULE_1__jpeg_camera__["a" /* addPrefixedStyle */])(this.message, 'boxSizing', 'border-box');
+    this.message.style.overflow = 'hidden';
+    this.message.style.textAlign = 'center';
+    this.message.style.position = 'absolute';
+    this.message.style.zIndex = 3;
+    this.message.innerHTML = this.options.accessMessage;
+
+    this.container.appendChild(this.message);
+
+    this.videoContainer = document.createElement('div');
+    this.videoContainer.style.overflow = 'hidden';
+    this.videoContainer.style.position = 'absolute';
+    this.videoContainer.style.zIndex = 1;
+
+    this.container.appendChild(this.videoContainer);
+    this.resizeVideoContainer();
+
+    this.video = document.createElement('video');
+    this.video.autoplay = true;
+    if (this.options.previewMirror) Object(__WEBPACK_IMPORTED_MODULE_1__jpeg_camera__["a" /* addPrefixedStyle */])(this.video, 'transform', 'scalex(-1.0)');
+
+    if (window.AudioContext) {
+      if (canPlay(this.vorbisAudio)) {
+        this.loadShutterSound(this.options.shutterOggUrl);
+      } else if (canPlay(this.mpegAudio)) {
+        this.loadShutterSound(this.options.shutterMp3Url);
+      }
+    }
+
+    const getUserMediaOptions = {
+      video: {
+        optional: [{ minWidth: 2560 }, { minWidth: 2048 }, { minWidth: 1920 }, { minWidth: 1600 }, { minWidth: 1280 }, { minWidth: 1044 }, { minWidth: 920 }, { minWidth: 800 }, { minWidth: 640 }, { minWidth: 480 }, { minWidth: 360 }]
+      },
+      audio: false
+    };
+
+    const success = stream => {
+      this.removeMessage();
+
+      if (window.URL) {
+        this.video.src = URL.createObjectURL(stream);
+      } else {
+        this.video.src = stream;
+      }
+
+      this.blockElementAccess();
+
+      return this.waitForVideoReady();
+    };
+    const failure = err => {
+      throw new __WEBPACK_IMPORTED_MODULE_2__errors__["a" /* WebcamError */](__WEBPACK_IMPORTED_MODULE_2__errors__["b" /* WebcamErrors */].UNKNOWN_ERROR, err);
+    };
+
+    // XXX In an older spec first parameter was a string
+    try {
+      return navigator.getUserMedia(getUserMediaOptions, success.bind(this), failure.bind(this));
+    } catch (error) {
+      try {
+        return navigator.getUserMedia('video', success.bind(this), failure.bind(this));
+      } catch (err) {
+        this.message.innerHTML = '';
+        throw new __WEBPACK_IMPORTED_MODULE_2__errors__["a" /* WebcamError */](__WEBPACK_IMPORTED_MODULE_2__errors__["b" /* WebcamErrors */].GET_MEDIA_FAILED_INIT, err);
+      }
+    }
+  }
+
+  resizePreview() {
+    this.resizeVideoContainer();
+    this.resizeVideoBox();
+  }
+
+  resizeVideoContainer() {
+    const verticalPadding = Math.floor(this.viewHeight * 0.2);
+    const horizontalPadding = Math.floor(this.viewWidth * 0.2);
+    this.message.style.paddingTop = `${verticalPadding}px`;
+    this.message.style.paddingBottom = `${verticalPadding}px`;
+    this.message.style.paddingLeft = `${horizontalPadding}px`;
+    this.message.style.paddingRight = `${horizontalPadding}px`;
+    this.videoContainer.style.width = `${this.viewWidth}px`;
+    this.videoContainer.style.height = `${this.viewHeight}px`;
+  }
+
+  enginePlayShutterSound() {
+    if (!this.shutterBuffer) {
+      return null;
+    }
+
+    const source = this.audioContext.createBufferSource();
+    source.buffer = this.shutterBuffer;
+    source.connect(this.audioContext.destination);
+    return source.start(0);
+  }
+
+  engineCapture(theSnapshot, mirror, quality, scale) {
+    const snapshot = theSnapshot;
+    const crop = this.getCaptureCrop();
+
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(crop.width * scale);
+    canvas.height = Math.round(crop.height * scale);
+
+    const context = canvas.getContext('2d');
+    context.drawImage(this.video, crop.xOffset, crop.yOffset, crop.width, crop.height, 0, 0, Math.round(crop.width * scale), Math.round(crop.height * scale));
+
+    snapshot.canvas = canvas;
+    snapshot.mirror = mirror;
+    snapshot.quality = quality;
+
+    return snapshot;
+  }
+
+  engineDisplay(snapshot) {
+    if (this.displayedcanvas) {
+      this.container.removeChild(this.displayedcanvas);
+    }
+
+    this.displayedcanvas = snapshot.canvas;
+    this.displayedcanvas.style.width = `${this.viewWidth}px`;
+    this.displayedcanvas.style.height = `${this.viewHeight}px`;
+    this.displayedcanvas.style.top = 0;
+    this.displayedcanvas.style.left = 0;
+    this.displayedcanvas.style.position = 'absolute';
+    this.displayedcanvas.style.zIndex = 2;
+    if (this.options.previewMirror) Object(__WEBPACK_IMPORTED_MODULE_1__jpeg_camera__["a" /* addPrefixedStyle */])(this.displayedcanvas, 'transform', 'scalex(-1.0)');
+
+    return this.container.appendChild(this.displayedcanvas);
+  }
+
+  engineGetcanvas(snapshot) {
+    const canvas = document.createElement('canvas');
+    canvas.width = snapshot.canvas.width;
+    canvas.height = snapshot.canvas.height;
+    const context = canvas.getContext('2d');
+    context.drawImage(snapshot.canvas, 0, 0);
+    return canvas;
+  }
+
+  engineGetImageData(snapshot) {
+    const canvas = snapshot.canvas;
+    const context = canvas.getContext('2d');
+    return context.getImageData(0, 0, canvas.width, canvas.height);
+  }
+
+  engineGetBlob(snapshot, mime, mirror, quality, callback) {
+    let canvas;
+    if (mirror) {
+      canvas = document.createElement('canvas');
+      canvas.width = snapshot.canvas.width;
+      canvas.height = snapshot.canvas.height;
+
+      const context = canvas.getContext('2d');
+      context.setTransform(1, 0, 0, 1, 0, 0); // reset transformation matrix
+      context.translate(canvas.width, 0);
+      context.scale(-1, 1);
+      context.drawImage(snapshot.canvas, 0, 0);
+    } else {
+      canvas = snapshot.canvas;
+    }
+
+    return canvas.toBlob(blob => callback(blob), mime, quality);
+  }
+
+  engineDiscard(snapshot) {
+    // eslint-disable-next-line no-param-reassign
+    return delete snapshot.canvas;
+  }
+
+  engineShowStream() {
+    if (this.displayedcanvas) {
+      this.container.removeChild(this.displayedcanvas);
+      this.displayedcanvas = null;
+    }
+    this.videoContainer.style.display = 'block';
+    return null;
+  }
+
+  removeMessage() {
+    this.message.style.display = 'none';
+    return null;
+  }
+
+  loadShutterSound(url) {
+    if (this.audioContext) {
+      return null;
+    }
+
+    this.audioContext = new AudioContext();
+
+    const request = new XMLHttpRequest();
+    request.open('GET', url, true);
+    request.responseType = 'arraybuffer';
+
+    const that = this;
+    request.onload = () => that.audioContext.decodeAudioData(request.response, buffer => {
+      that.shutterBuffer = buffer;
+    });
+    return request.send();
+  }
+
+  waitForVideoReady() {
+    const videoWidth = parseInt(this.video.videoWidth, 10);
+    const videoHeight = parseInt(this.video.videoHeight, 10);
+
+    if (videoWidth > 0 && videoHeight > 0) {
+      this.videoContainer.appendChild(this.video);
+
+      this.videoWidth = videoWidth;
+      this.videoHeight = videoHeight;
+
+      this.video.style.position = 'relative';
+      this.resizeVideoBox();
+
+      return this.prepared(this.videoWidth, this.videoHeight);
+    } else if (this.statusChecksCount > 100) {
+      throw new __WEBPACK_IMPORTED_MODULE_2__errors__["a" /* WebcamError */](__WEBPACK_IMPORTED_MODULE_2__errors__["a" /* WebcamError */].CAMERA_NOT_READY);
+    }
+    this.statusChecksCount++;
+    const that = this;
+    this.waitForVideoReadyTimer = setTimeout(() => that.waitForVideoReady(), 100);
+    return null;
+  }
+
+  resizeVideoBox() {
+    const crop = this.getVideoCrop();
+    this.video.style.width = `${crop.width}px`;
+    this.video.style.height = `${crop.height}px`;
+    this.video.style.left = `${crop.xOffset}px`;
+    this.video.style.top = `${crop.yOffset}px`;
+  }
+
+  getVideoCrop() {
+    let videoScale;
+    const videoRatio = this.videoWidth / this.videoHeight;
+    const viewRatio = this.viewWidth / this.viewHeight;
+
+    if (videoRatio >= viewRatio) {
+      // fill height, crop width
+      this.debug('Filling height');
+      videoScale = this.viewHeight / this.videoHeight;
+      const scaledVideoWidth = Math.round(this.videoWidth * videoScale);
+
+      return {
+        width: scaledVideoWidth,
+        height: this.viewHeight,
+        xOffset: -Math.floor((scaledVideoWidth - this.viewWidth) / 2.0),
+        yOffset: 0
+      };
+    }
+    // fill width, crop height
+    this.debug('Filling width');
+    videoScale = this.viewWidth / this.videoWidth;
+    const scaledVideoHeight = Math.round(this.videoHeight * videoScale);
+
+    return {
+      width: this.viewWidth,
+      height: scaledVideoHeight,
+      xOffset: 0,
+      yOffset: -Math.floor((scaledVideoHeight - this.viewHeight) / 2.0)
+    };
+  }
+
+  getCaptureCrop() {
+    const videoRatio = this.videoWidth / this.videoHeight;
+    const viewRatio = this.viewWidth / this.viewHeight;
+
+    if (videoRatio >= viewRatio) {
+      // take full height, crop width
+      const snapshotWidth = Math.round(this.videoHeight * viewRatio);
+
+      return {
+        width: snapshotWidth,
+        height: this.videoHeight,
+        xOffset: Math.floor((this.videoWidth - snapshotWidth) / 2.0),
+        yOffset: 0
+      };
+    }
+    // take full width, crop height
+    const snapshotHeight = Math.round(this.videoWidth / viewRatio);
+
+    return {
+      width: this.videoWidth,
+      height: snapshotHeight,
+      xOffset: 0,
+      yOffset: Math.floor((this.videoHeight - snapshotHeight) / 2.0)
+    };
+  }
+}
+/* harmony export (immutable) */ __webpack_exports__["a"] = JpegCameraHtml5;
+
+
+JpegCameraHtml5.engineCheck = (success, failure) => {
+  const canvas = document.createElement('canvas');
+  if (canvas.getContext && !canvas.toBlob) {
+    failure('JpegCamera: Canvas-to-Blob is not loaded');
+  }
+  try {
+    navigator.getUserMedia({ video: true }, success, failure);
+  } catch (err) {
+    failure('getUserMedia could not be initialised.', err);
+  }
+};
+
+/***/ }),
+/* 5 */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0_auto_bind__ = __webpack_require__(0);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0_auto_bind___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_0_auto_bind__);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__stats__ = __webpack_require__(6);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__jpeg_camera__ = __webpack_require__(1);
 
 
 
@@ -899,7 +1249,7 @@ class Snapshot {
 
 
 /***/ }),
-/* 5 */
+/* 6 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -924,347 +1274,13 @@ class Stats {
 
 
 /***/ }),
-/* 6 */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0_auto_bind__ = __webpack_require__(1);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0_auto_bind___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_0_auto_bind__);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__jpeg_camera__ = __webpack_require__(0);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__errors__ = __webpack_require__(2);
-
-
-
-
-const canPlay = type => {
-  const elem = document.createElement('video');
-  return !!(elem.canPlayType && elem.canPlayType(type).replace(/no/, ''));
-};
-
-// JpegCamera implementation that uses _getUserMedia_ to capture snapshots,
-// canvas_element_ to display them and optionally _Web_Audio_API_ to play shutter sound.
-//
-// @private
-class JpegCameraHtml5 extends __WEBPACK_IMPORTED_MODULE_1__jpeg_camera__["b" /* default */] {
-  constructor(theContainer, options) {
-    super(theContainer, options);
-    this.waitForVideoReadyTimer = null;
-    this.statusChecksCount = 0;
-    this.vorbisAudio = 'audio/ogg; codecs=vorbis';
-    this.mpegAudio = 'audio/mpeg; ';
-    this.message = null;
-    this.videoContainer = null;
-    __WEBPACK_IMPORTED_MODULE_0_auto_bind___default()(this);
-    this.engineInit();
-  }
-
-  destruct() {
-    this.waitForVideoReadyTimer = null;
-  }
-
-  engineInit() {
-    this.debug('Using HTML5 engine.');
-
-    this.message = document.createElement('div');
-    this.message.class = 'message';
-    this.message.style.width = '100%';
-    this.message.style.height = '100%';
-    Object(__WEBPACK_IMPORTED_MODULE_1__jpeg_camera__["a" /* addPrefixedStyle */])(this.message, 'boxSizing', 'border-box');
-    this.message.style.overflow = 'hidden';
-    this.message.style.textAlign = 'center';
-    this.message.style.position = 'absolute';
-    this.message.style.zIndex = 3;
-    this.message.innerHTML = 'Please allow camera access when prompted by the browser.<br><br>' + 'Look for camera icon around your address bar.';
-    this.container.appendChild(this.message);
-
-    this.videoContainer = document.createElement('div');
-    this.videoContainer.style.overflow = 'hidden';
-    this.videoContainer.style.position = 'absolute';
-    this.videoContainer.style.zIndex = 1;
-
-    this.container.appendChild(this.videoContainer);
-    this.resizeVideoContainer();
-
-    this.video = document.createElement('video');
-    this.video.autoplay = true;
-    Object(__WEBPACK_IMPORTED_MODULE_1__jpeg_camera__["a" /* addPrefixedStyle */])(this.video, 'transform', 'scalex(-1.0)');
-
-    if (window.AudioContext) {
-      if (canPlay(this.vorbisAudio)) {
-        this.loadShutterSound(this.options.shutterOggUrl);
-      } else if (canPlay(this.mpegAudio)) {
-        this.loadShutterSound(this.options.shutterMp3Url);
-      }
-    }
-
-    const getUserMediaOptions = {
-      video: {
-        optional: [{ minWidth: 2560 }, { minWidth: 2048 }, { minWidth: 1920 }, { minWidth: 1600 }, { minWidth: 1280 }, { minWidth: 1044 }, { minWidth: 920 }, { minWidth: 800 }, { minWidth: 640 }, { minWidth: 480 }, { minWidth: 360 }]
-      }
-    };
-
-    const success = stream => {
-      this.removeMessage();
-
-      if (window.URL) {
-        this.video.src = URL.createObjectURL(stream);
-      } else {
-        this.video.src = stream;
-      }
-
-      this.blockElementAccess();
-
-      return this.waitForVideoReady();
-    };
-    const failure = err => {
-      throw new __WEBPACK_IMPORTED_MODULE_2__errors__["a" /* WebcamError */](__WEBPACK_IMPORTED_MODULE_2__errors__["b" /* WebcamErrors */].UNKNOWN_ERROR, err);
-    };
-
-    // XXX In an older spec first parameter was a string
-    try {
-      return navigator.getUserMedia(getUserMediaOptions, success.bind(this), failure.bind(this));
-    } catch (error) {
-      try {
-        return navigator.getUserMedia('video', success.bind(this), failure.bind(this));
-      } catch (err) {
-        this.message.innerHTML = '';
-        throw new __WEBPACK_IMPORTED_MODULE_2__errors__["a" /* WebcamError */](__WEBPACK_IMPORTED_MODULE_2__errors__["b" /* WebcamErrors */].GET_MEDIA_FAILED_INIT, err);
-      }
-    }
-  }
-
-  resizePreview() {
-    this.resizeVideoContainer();
-    this.resizeVideoBox();
-  }
-
-  resizeVideoContainer() {
-    const verticalPadding = Math.floor(this.viewHeight * 0.2);
-    const horizontalPadding = Math.floor(this.viewWidth * 0.2);
-    this.message.style.paddingTop = `${verticalPadding}px`;
-    this.message.style.paddingBottom = `${verticalPadding}px`;
-    this.message.style.paddingLeft = `${horizontalPadding}px`;
-    this.message.style.paddingRight = `${horizontalPadding}px`;
-    this.videoContainer.style.width = `${this.viewWidth}px`;
-    this.videoContainer.style.height = `${this.viewHeight}px`;
-  }
-
-  enginePlayShutterSound() {
-    if (!this.shutterBuffer) {
-      return null;
-    }
-
-    const source = this.audioContext.createBufferSource();
-    source.buffer = this.shutterBuffer;
-    source.connect(this.audioContext.destination);
-    return source.start(0);
-  }
-
-  engineCapture(theSnapshot, mirror, quality, scale) {
-    const snapshot = theSnapshot;
-    const crop = this.getCaptureCrop();
-
-    const canvas = document.createElement('canvas');
-    canvas.width = Math.round(crop.width * scale);
-    canvas.height = Math.round(crop.height * scale);
-
-    const context = canvas.getContext('2d');
-    context.drawImage(this.video, crop.xOffset, crop.yOffset, crop.width, crop.height, 0, 0, Math.round(crop.width * scale), Math.round(crop.height * scale));
-
-    snapshot.canvas = canvas;
-    snapshot.mirror = mirror;
-    snapshot.quality = quality;
-
-    return snapshot;
-  }
-
-  engineDisplay(snapshot) {
-    if (this.displayedcanvas) {
-      this.container.removeChild(this.displayedcanvas);
-    }
-
-    this.displayedcanvas = snapshot.canvas;
-    this.displayedcanvas.style.width = `${this.viewWidth}px`;
-    this.displayedcanvas.style.height = `${this.viewHeight}px`;
-    this.displayedcanvas.style.top = 0;
-    this.displayedcanvas.style.left = 0;
-    this.displayedcanvas.style.position = 'absolute';
-    this.displayedcanvas.style.zIndex = 2;
-    Object(__WEBPACK_IMPORTED_MODULE_1__jpeg_camera__["a" /* addPrefixedStyle */])(this.displayedcanvas, 'transform', 'scalex(-1.0)');
-
-    return this.container.appendChild(this.displayedcanvas);
-  }
-
-  engineGetcanvas(snapshot) {
-    const canvas = document.createElement('canvas');
-    canvas.width = snapshot.canvas.width;
-    canvas.height = snapshot.canvas.height;
-    const context = canvas.getContext('2d');
-    context.drawImage(snapshot.canvas, 0, 0);
-    return canvas;
-  }
-
-  engineGetImageData(snapshot) {
-    const canvas = snapshot.canvas;
-    const context = canvas.getContext('2d');
-    return context.getImageData(0, 0, canvas.width, canvas.height);
-  }
-
-  engineGetBlob(snapshot, mime, mirror, quality, callback) {
-    let canvas;
-    if (mirror) {
-      canvas = document.createElement('canvas');
-      canvas.width = snapshot.canvas.width;
-      canvas.height = snapshot.canvas.height;
-
-      const context = canvas.getContext('2d');
-      context.setTransform(1, 0, 0, 1, 0, 0); // reset transformation matrix
-      context.translate(canvas.width, 0);
-      context.scale(-1, 1);
-      context.drawImage(snapshot.canvas, 0, 0);
-    } else {
-      canvas = snapshot.canvas;
-    }
-
-    return canvas.toBlob(blob => callback(blob), mime, quality);
-  }
-
-  engineDiscard(snapshot) {
-    // eslint-disable-next-line no-param-reassign
-    return delete snapshot.canvas;
-  }
-
-  engineShowStream() {
-    if (this.displayedcanvas) {
-      this.container.removeChild(this.displayedcanvas);
-      this.displayedcanvas = null;
-    }
-    this.videoContainer.style.display = 'block';
-    return null;
-  }
-
-  removeMessage() {
-    this.message.style.display = 'none';
-    return null;
-  }
-
-  loadShutterSound(url) {
-    if (this.audioContext) {
-      return null;
-    }
-
-    this.audioContext = new AudioContext();
-
-    const request = new XMLHttpRequest();
-    request.open('GET', url, true);
-    request.responseType = 'arraybuffer';
-
-    const that = this;
-    request.onload = () => that.audioContext.decodeAudioData(request.response, buffer => {
-      that.shutterBuffer = buffer;
-    });
-    return request.send();
-  }
-
-  waitForVideoReady() {
-    const videoWidth = parseInt(this.video.videoWidth, 10);
-    const videoHeight = parseInt(this.video.videoHeight, 10);
-
-    if (videoWidth > 0 && videoHeight > 0) {
-      this.videoContainer.appendChild(this.video);
-
-      this.videoWidth = videoWidth;
-      this.videoHeight = videoHeight;
-
-      this.video.style.position = 'relative';
-      this.resizeVideoBox();
-
-      return this.prepared(this.videoWidth, this.videoHeight);
-    } else if (this.statusChecksCount > 100) {
-      throw new __WEBPACK_IMPORTED_MODULE_2__errors__["a" /* WebcamError */](__WEBPACK_IMPORTED_MODULE_2__errors__["a" /* WebcamError */].CAMERA_NOT_READY);
-    }
-    this.statusChecksCount++;
-    const that = this;
-    this.waitForVideoReadyTimer = setTimeout(() => that.waitForVideoReady(), 100);
-    return null;
-  }
-
-  resizeVideoBox() {
-    const crop = this.getVideoCrop();
-    this.video.style.width = `${crop.width}px`;
-    this.video.style.height = `${crop.height}px`;
-    this.video.style.left = `${crop.xOffset}px`;
-    this.video.style.top = `${crop.yOffset}px`;
-  }
-
-  getVideoCrop() {
-    let videoScale;
-    const videoRatio = this.videoWidth / this.videoHeight;
-    const viewRatio = this.viewWidth / this.viewHeight;
-
-    if (videoRatio >= viewRatio) {
-      // fill height, crop width
-      this.debug('Filling height');
-      videoScale = this.viewHeight / this.videoHeight;
-      const scaledVideoWidth = Math.round(this.videoWidth * videoScale);
-
-      return {
-        width: scaledVideoWidth,
-        height: this.viewHeight,
-        xOffset: -Math.floor((scaledVideoWidth - this.viewWidth) / 2.0),
-        yOffset: 0
-      };
-    }
-    // fill width, crop height
-    this.debug('Filling width');
-    videoScale = this.viewWidth / this.videoWidth;
-    const scaledVideoHeight = Math.round(this.videoHeight * videoScale);
-
-    return {
-      width: this.viewWidth,
-      height: scaledVideoHeight,
-      xOffset: 0,
-      yOffset: -Math.floor((scaledVideoHeight - this.viewHeight) / 2.0)
-    };
-  }
-
-  getCaptureCrop() {
-    const videoRatio = this.videoWidth / this.videoHeight;
-    const viewRatio = this.viewWidth / this.viewHeight;
-
-    if (videoRatio >= viewRatio) {
-      // take full height, crop width
-      const snapshotWidth = Math.round(this.videoHeight * viewRatio);
-
-      return {
-        width: snapshotWidth,
-        height: this.videoHeight,
-        xOffset: Math.floor((this.videoWidth - snapshotWidth) / 2.0),
-        yOffset: 0
-      };
-    }
-    // take full width, crop height
-    const snapshotHeight = Math.round(this.videoWidth / viewRatio);
-
-    return {
-      width: this.videoWidth,
-      height: snapshotHeight,
-      xOffset: 0,
-      yOffset: Math.floor((this.videoHeight - snapshotHeight) / 2.0)
-    };
-  }
-}
-/* harmony export (immutable) */ __webpack_exports__["a"] = JpegCameraHtml5;
-
-
-/***/ }),
 /* 7 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0_auto_bind__ = __webpack_require__(1);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0_auto_bind__ = __webpack_require__(0);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_0_auto_bind___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_0_auto_bind__);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__jpeg_camera__ = __webpack_require__(0);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__jpeg_camera__ = __webpack_require__(1);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__errors__ = __webpack_require__(2);
 
 
@@ -1343,6 +1359,9 @@ class JpegCameraFlash extends __WEBPACK_IMPORTED_MODULE_1__jpeg_camera__["b" /* 
     containerToBeReplaced.id = `jpeg_cameraflash_${this.id}`;
     containerToBeReplaced.style.width = '100%';
     containerToBeReplaced.style.height = '100%';
+    if (this.options.previewMirror) {
+      Object(__WEBPACK_IMPORTED_MODULE_1__jpeg_camera__["a" /* addPrefixedStyle */])(containerToBeReplaced, 'transform', 'scalex(-1.0)');
+    }
 
     this.container.appendChild(containerToBeReplaced);
 
@@ -1486,6 +1505,16 @@ class JpegCameraFlash extends __WEBPACK_IMPORTED_MODULE_1__jpeg_camera__["b" /* 
 }
 /* harmony export (immutable) */ __webpack_exports__["a"] = JpegCameraFlash;
 
+
+JpegCameraFlash.engineCheck = (success, failure) => {
+  if (!window.swfobject) {
+    failure('JpegCamera: SWFObject is not loaded.');
+  }
+  if (!window.swfobject.hasFlashPlayerVersion('9')) {
+    failure('No Flash in version 9 available.');
+  }
+  success();
+};
 
 /***/ })
 /******/ ]);

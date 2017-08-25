@@ -21,7 +21,7 @@ export const addPrefixedStyle = (theElement, style, value) => {
 // Base class for JpegCamera implementations. Subclasses provide functionality
 // defined by this API using different engines. On supported browsers HTML5
 // implementation will be used, otherwise Flash will be used if available.
-export default class JpegCamera {
+export default class JpegCameraBase {
   // @nodoc
   // @private
   defaultOptions = {
@@ -36,7 +36,11 @@ export default class JpegCamera {
     quality: 0.9,
     shutter: true,
     mirror: false,
+    previewMirror: true,
     scale: 1.0,
+    accessMessage:
+      'Please allow camera access when prompted by the browser.<br><br>' +
+      'Look for camera icon around your address bar.',
   };
 
   // @nodoc
@@ -177,7 +181,7 @@ export default class JpegCamera {
   //   `videoWidth` and `videoHeight` properties as the first argument. These
   //   indicate camera's native resolution.
   //
-  // @return [JpegCamera] Self for chaining.
+  // @return [JpegCameraBase] Self for chaining.
   ready(callback) {
     this.options.onReady = callback;
     if (this.options.onReady && this.isReady) {
@@ -257,7 +261,7 @@ export default class JpegCamera {
 
   // Hide currently displayed snapshot and show the video stream.
   //
-  // @return [JpegCamera] Self for chaining.
+  // @return [JpegCameraBase] Self for chaining.
   showStream() {
     this.engineShowStream();
     this.displayedSnapshot = null;
@@ -266,7 +270,7 @@ export default class JpegCamera {
 
   // Discard all snapshots and show video stream.
   //
-  // @return [JpegCamera] Self for chaining.
+  // @return [JpegCameraBase] Self for chaining.
   discardAll() {
     if (this.displayedSnapshot) {
       this.showStream();

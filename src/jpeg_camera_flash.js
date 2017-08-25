@@ -1,12 +1,12 @@
 import autoBind from 'auto-bind';
-import JpegCamera, { isCanvasSupported } from './jpeg_camera';
+import JpegCameraBase, { isCanvasSupported, addPrefixedStyle } from './jpeg_camera';
 import { WebcamError, WebcamErrors } from './errors';
 
 //
 // JpegCamera implementation that uses Flash to capture and display snapshots.
 //
 // @private
-export default class JpegCameraFlash extends JpegCamera {
+export default class JpegCameraFlash extends JpegCameraBase {
   constructor(theContainer, options) {
     super(theContainer, options);
     this.instances = {};
@@ -26,6 +26,16 @@ export default class JpegCameraFlash extends JpegCamera {
     if (!instance) { return null; }
 
     return this.prototype[method].apply(instance, ...args);
+  }
+
+  static engineCheck = (success, failure) => {
+    if (!window.swfobject) {
+      failure('JpegCamera: SWFObject is not loaded.');
+    }
+    if (!window.swfobject.hasFlashPlayerVersion('9')) {
+      failure('No Flash in version 9 available.');
+    }
+    success();
   }
 
   engineInit() {
@@ -72,6 +82,9 @@ export default class JpegCameraFlash extends JpegCamera {
     containerToBeReplaced.id = `jpeg_cameraflash_${this.id}`;
     containerToBeReplaced.style.width = '100%';
     containerToBeReplaced.style.height = '100%';
+    if (this.options.previewMirror) {
+      addPrefixedStyle(containerToBeReplaced, 'transform', 'scalex(-1.0)');
+    }
 
     this.container.appendChild(containerToBeReplaced);
 
