@@ -1429,7 +1429,8 @@ var Snapshot = function () {
 
         var sumOfSquareDistances = 0;
         grayValues.forEach(function (oneGray) {
-          sumOfSquareDistances += (oneGray - mean) ** 2;
+          // eslint-disable-next-line no-restricted-properties
+          sumOfSquareDistances += Math.pow(oneGray - mean, 2);
         });
 
         this.stats = new _stats2.default();
