@@ -1,6 +1,6 @@
 {
   "name": "jpeg-camera-es6",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "author": " Kamil Tunkiewicz (original code by Adam Wróbel)",
   "license": "MIT",
   "repository": {
@@ -10,7 +10,9 @@
   "main": "dist/jpeg_camera.js",
   "module": "dist/jpeg_camera.js",
   "dependencies": {
-    "auto-bind": "^1.1.0",
+    "auto-bind": "^1.1.0"
+  },
+  "devDependencies": {
     "babel-core": "^6.26.0",
     "babel-eslint": "^7.2.3",
     "babel-loader": "^7.1.2",
