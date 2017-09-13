@@ -9,15 +9,16 @@ module.exports = {
     libraryTarget: 'umd',
   },
   module: {
-    loaders: [
+    rules: [
       {
         test: /\.js$/,
-        loader: 'babel-loader',
-        include: [path.resolve(__dirname, 'src')],
-        options: {
-          presets: ['es2015'],
-          plugins: ['transform-class-properties'],
-        },
+        use: [{
+          loader: 'babel-loader',
+          options: {
+            presets: ['es2015'],
+            plugins: ['transform-class-properties'],
+          }
+        }],
       },
     ],
   },

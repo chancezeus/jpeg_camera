@@ -79,18 +79,39 @@ return /******/ (function(modules) { // webpackBootstrap
 
 "use strict";
 
-module.exports = self => {
-	for (const key of Object.getOwnPropertyNames(self.constructor.prototype)) {
-		const val = self[key];
 
-		if (key !== 'constructor' && typeof val === 'function') {
-			self[key] = val.bind(self);
+module.exports = function (self) {
+	var _iteratorNormalCompletion = true;
+	var _didIteratorError = false;
+	var _iteratorError = undefined;
+
+	try {
+		for (var _iterator = Object.getOwnPropertyNames(self.constructor.prototype)[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+			var key = _step.value;
+
+			var val = self[key];
+
+			if (key !== 'constructor' && typeof val === 'function') {
+				self[key] = val.bind(self);
+			}
+		}
+	} catch (err) {
+		_didIteratorError = true;
+		_iteratorError = err;
+	} finally {
+		try {
+			if (!_iteratorNormalCompletion && _iterator.return) {
+				_iterator.return();
+			}
+		} finally {
+			if (_didIteratorError) {
+				throw _iteratorError;
+			}
 		}
 	}
 
 	return self;
 };
-
 
 /***/ }),
 /* 1 */
