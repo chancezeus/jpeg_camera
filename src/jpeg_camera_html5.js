@@ -19,12 +19,21 @@ export default class JpegCameraHtml5 extends JpegCameraBase {
     this.mpegAudio = 'audio/mpeg; ';
     this.message = null;
     this.videoContainer = null;
+    this.stream = null;
     autoBind(this);
     this.engineInit();
   }
 
   destruct() {
     this.waitForVideoReadyTimer = null;
+    if (this.stream) {
+      this.stream.getVideoTracks().forEach((track) => {
+        track.stop();
+      });
+      this.stream.getAudioTracks().forEach((track) => {
+        track.stop();
+      });
+    }
   }
 
   static engineCheck = (success, failure) => {
@@ -97,6 +106,7 @@ export default class JpegCameraHtml5 extends JpegCameraBase {
     const success =
       (stream) => {
         this.removeMessage();
+        this.stream = stream;
 
         if (window.URL) {
           this.video.src = URL.createObjectURL(stream);

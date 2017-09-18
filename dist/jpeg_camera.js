@@ -741,6 +741,7 @@ var JpegCameraHtml5 = function (_JpegCameraBase) {
     _this.mpegAudio = 'audio/mpeg; ';
     _this.message = null;
     _this.videoContainer = null;
+    _this.stream = null;
     (0, _autoBind2.default)(_this);
     _this.engineInit();
     return _this;
@@ -750,6 +751,14 @@ var JpegCameraHtml5 = function (_JpegCameraBase) {
     key: 'destruct',
     value: function destruct() {
       this.waitForVideoReadyTimer = null;
+      if (this.stream) {
+        this.stream.getVideoTracks().forEach(function (track) {
+          track.stop();
+        });
+        this.stream.getAudioTracks().forEach(function (track) {
+          track.stop();
+        });
+      }
     }
   }, {
     key: 'engineInit',
@@ -800,6 +809,7 @@ var JpegCameraHtml5 = function (_JpegCameraBase) {
 
       var success = function success(stream) {
         _this2.removeMessage();
+        _this2.stream = stream;
 
         if (window.URL) {
           _this2.video.src = URL.createObjectURL(stream);
