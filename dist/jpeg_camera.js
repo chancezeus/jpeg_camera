@@ -751,6 +751,10 @@ var JpegCameraHtml5 = function (_JpegCameraBase) {
     key: 'destruct',
     value: function destruct() {
       this.waitForVideoReadyTimer = null;
+      if (this.video) {
+        this.video.pause();
+        this.video.src = '';
+      }
       if (this.stream) {
         this.stream.getVideoTracks().forEach(function (track) {
           track.stop();
@@ -968,7 +972,7 @@ var JpegCameraHtml5 = function (_JpegCameraBase) {
   }, {
     key: 'loadShutterSound',
     value: function loadShutterSound(url) {
-      if (this.audioContext) {
+      if (this.audioContext || !url) {
         return null;
       }
 

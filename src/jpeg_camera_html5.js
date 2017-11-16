@@ -26,6 +26,10 @@ export default class JpegCameraHtml5 extends JpegCameraBase {
 
   destruct() {
     this.waitForVideoReadyTimer = null;
+    if (this.video) {
+      this.video.pause();
+      this.video.src = '';
+    }
     if (this.stream) {
       this.stream.getVideoTracks().forEach((track) => {
         track.stop();
@@ -254,7 +258,7 @@ export default class JpegCameraHtml5 extends JpegCameraBase {
   }
 
   loadShutterSound(url) {
-    if (this.audioContext) { return null; }
+    if (this.audioContext || !url) { return null; }
 
     this.audioContext = new AudioContext();
 
