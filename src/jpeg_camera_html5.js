@@ -113,7 +113,11 @@ export default class JpegCameraHtml5 extends JpegCameraBase {
         this.stream = stream;
 
         if (window.URL) {
-          this.video.src = URL.createObjectURL(stream);
+          try {
+            this.video.srcObject = stream;
+          } catch (error) {
+            this.video.src = URL.createObjectURL(stream);
+          }
         } else {
           this.video.src = stream;
         }

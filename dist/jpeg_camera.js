@@ -816,7 +816,11 @@ var JpegCameraHtml5 = function (_JpegCameraBase) {
         _this2.stream = stream;
 
         if (window.URL) {
-          _this2.video.src = URL.createObjectURL(stream);
+          try {
+            _this2.video.srcObject = stream;
+          } catch (error) {
+            _this2.video.src = URL.createObjectURL(stream);
+          }
         } else {
           _this2.video.src = stream;
         }
