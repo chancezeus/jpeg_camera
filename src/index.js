@@ -8,19 +8,38 @@ if (!navigator.getUserMedia) {
 }
 if (!window.AudioContext) { window.AudioContext = window.webkitAudioContext; }
 
+/**
+ * @option options dontCheckFlash [Boolean] - if this option is set the engine will
+ *   try the HTML5 version first and if this fails it will render the flash object
+ *   without trying to determine if flash is installed and what version is it.
+ *   This is required for Safari 10 which hides the fact of Flash being installed (but disabled
+ *   by default). Rendering the Flash object will trigger confirmation dialog "Would you like
+ *   to use Flash". WARNING - forcing render in such way means that the onError will never get
+ *   executed in case the client disallow Flash to run.
+ */
 
 const JpegCamera = (container, options) => {
-  const html5Init = () => (new JpegCameraHtml5(container, options));
-  const flashInit = () => (new JpegCameraFlash(container, options));
-  const initError = () => (new WebcamError(WebcamErrors.NO_GET_MEDIA_NOR_FLASH_AVAILABLE));
+  const html5Init = () => new JpegCameraHtml5(container, options);
+  const flashInit = () => new JpegCameraFlash(container, options);
+  const initError = () => { throw new WebcamError(WebcamErrors.NO_GET_MEDIA_NOR_FLASH_AVAILABLE); };
+
+  if (!options.onInit) {
+    throw new WebcamError(WebcamErrors.INCORRECT_INITIALISATION);
+  }
 
   JpegCameraHtml5.engineCheck(
-    /* success */ () => { if (options.onInit) options.onInit(html5Init()); },
+    /* success */ () => { options.onInit(html5Init()); },
     /* failure */ () => {
-      JpegCameraFlash.engineCheck(
-        /* success */ () => { if (options.onInit) options.onInit(flashInit()); },
-        /* failure */ () => { if (options.onError) options.onError(initError()); },
-      );
+      if (options.dontCheckFlash) {
+        /* skip checking for flash and just run it */
+        options.onInit(flashInit());
+      } else {
+        /* do check for flash in correct version */
+        JpegCameraFlash.engineCheck(
+          /* success */ () => { options.onInit(flashInit()); },
+          /* failure */ () => { if (options.onError) options.onError(initError()); },
+        );
+      }
     },
   );
 };

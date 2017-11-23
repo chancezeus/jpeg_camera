@@ -618,6 +618,7 @@ var WebcamError = exports.WebcamError = function WebcamError(errorCode) {
 };
 
 var WebcamErrors = exports.WebcamErrors = {
+  INCORRECT_INITIALISATION: 'INCORRECT_INITIALISATION',
   UNKNOWN_ERROR: 'UNKNOWN_ERROR',
   GET_MEDIA_FAILED_INIT: 'GET_MEDIA_FAILED_INIT',
   FLASH_FAILED_LOADING: 'FLASH_FAILED_LOADING',
@@ -657,6 +658,16 @@ if (!window.AudioContext) {
   window.AudioContext = window.webkitAudioContext;
 }
 
+/**
+ * @option options dontCheckFlash [Boolean] - if this option is set the engine will
+ *   try the HTML5 version first and if this fails it will render the flash object
+ *   without trying to determine if flash is installed and what version is it.
+ *   This is required for Safari 10 which hides the fact of Flash being installed (but disabled
+ *   by default). Rendering the Flash object will trigger confirmation dialog "Would you like
+ *   to use Flash". WARNING - forcing render in such way means that the onError will never get
+ *   executed in case the client disallow Flash to run.
+ */
+
 var JpegCamera = function JpegCamera(container, options) {
   var html5Init = function html5Init() {
     return new _jpeg_camera_html2.default(container, options);
@@ -665,21 +676,31 @@ var JpegCamera = function JpegCamera(container, options) {
     return new _jpeg_camera_flash2.default(container, options);
   };
   var initError = function initError() {
-    return new _errors.WebcamError(_errors.WebcamErrors.NO_GET_MEDIA_NOR_FLASH_AVAILABLE);
+    throw new _errors.WebcamError(_errors.WebcamErrors.NO_GET_MEDIA_NOR_FLASH_AVAILABLE);
   };
+
+  if (!options.onInit) {
+    throw new _errors.WebcamError(_errors.WebcamErrors.INCORRECT_INITIALISATION);
+  }
 
   _jpeg_camera_html2.default.engineCheck(
   /* success */function () {
-    if (options.onInit) options.onInit(html5Init());
+    options.onInit(html5Init());
   },
   /* failure */function () {
-    _jpeg_camera_flash2.default.engineCheck(
-    /* success */function () {
-      if (options.onInit) options.onInit(flashInit());
-    },
-    /* failure */function () {
-      if (options.onError) options.onError(initError());
-    });
+    if (options.dontCheckFlash) {
+      /* skip checking for flash and just run it */
+      options.onInit(flashInit());
+    } else {
+      /* do check for flash in correct version */
+      _jpeg_camera_flash2.default.engineCheck(
+      /* success */function () {
+        options.onInit(flashInit());
+      },
+      /* failure */function () {
+        if (options.onError) options.onError(initError());
+      });
+    }
   });
 };
 
@@ -1649,7 +1670,7 @@ var JpegCameraFlash = function (_JpegCameraBase) {
       this.container.appendChild(containerToBeReplaced);
 
       // eslint-disable-next-line no-undef
-      swfobject.embedSWF(this.options.swfUrl, containerToBeReplaced.id, this.viewWidth, this.viewHeight, '9', null, flashvars, params, attributes, callback);
+      swfobject.embedSWF(this.options.swfUrl, containerToBeReplaced.id, this.viewWidth, this.viewHeight, this.options.dontCheckFlash ? '0' : '9', null, flashvars, params, attributes, callback);
     }
   }, {
     key: 'waitForVideoReady',

@@ -94,7 +94,7 @@ export default class JpegCameraFlash extends JpegCameraBase {
       containerToBeReplaced.id,
       this.viewWidth,
       this.viewHeight,
-      '9',
+      this.options.dontCheckFlash ? '0' : '9',
       null,
       flashvars,
       params,
