@@ -1,6 +1,7 @@
 The MIT License (MIT)
 
-Copyright (c) 2013 Adam Wróbel
+Copyright for the original code of this project is held by (c) 2013 Adam Wróbel,
+the copyright for changes is held by (c) 2017 CurrencyFair Ltd.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
