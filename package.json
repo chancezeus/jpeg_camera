@@ -1,11 +1,11 @@
 {
   "name": "jpeg-camera-es6",
-  "version": "1.0.10",
-  "author": " Kamil Tunkiewicz (original code by Adam Wróbel)",
+  "version": "1.0.11",
+  "author": " CurrencyFair (original code by Adam Wróbel)",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/ktunkiewicz/jpeg_camera"
+    "url": "https://github.com/CurrencyFair/jpeg_camera"
   },
   "main": "dist/jpeg_camera.js",
   "module": "dist/jpeg_camera.js",

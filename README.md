@@ -69,7 +69,7 @@ JpegCamera(
 
 Then use the `theWebcam.capture()` to grab the picture blob.
 
-Take a look into https://github.com/ktunkiewicz/jpeg_camera/blob/master/src/jpeg_camera.js to see all the available
+Take a look into https://github.com/CurrencyFair/jpeg_camera/blob/master/src/jpeg_camera.js to see all the available
 config options and methods. There's plenty of docblocks in there to read.
 
 ## Caveats
@@ -86,8 +86,8 @@ the middle of the container with any other element (e.g. transparent div with so
 
 ## Contributing
 
-The source code is available on [Github](https://github.com/ktunkiewicz/jpeg_camera). The code (and a large part of this readme)
-is forked from https://github.com/ktunkiewicz/jpeg_camera but that projects seems not to be updated anymore.
+The source code is available on [Github](https://github.com/CurrencyFair/jpeg_camera). The code (and a large part of this readme)
+is forked from https://github.com/CurrencyFair/jpeg_camera but that projects seems not to be updated anymore.
 
 ## Building
 
@@ -98,6 +98,5 @@ Thanks to [Adam Wróbel](http://adamwrobel.com) for developing the original vers
 Thanks to Joseph Huckaby for creating and Matt Clements for maintaining
 Flash-based [JpegCam library](http://code.google.com/p/jpegcam/) which I have
 been using until HTML5 became a viable solution. If you're interested here's
-[Matt's repo](https://github.com/mattclements/jpegcam) and here's
-[mine](https://github.com/amw/jpegcam). Thanks to everyone else contributing to
-that project.
+[Matt's repo](https://github.com/mattclements/jpegcam).
+Thanks to everyone else contributing to that project.
