@@ -10,7 +10,8 @@
   "main": "dist/jpeg_camera.js",
   "module": "dist/jpeg_camera.js",
   "dependencies": {
-    "auto-bind": "^1.1.0"
+    "auto-bind": "^1.1.0",
+    "webrtc-adapter": "^6.0.3"
   },
   "devDependencies": {
     "babel-core": "^6.26.0",

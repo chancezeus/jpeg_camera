@@ -1,6 +1,7 @@
 import autoBind from 'auto-bind';
 import JpegCameraBase, { addPrefixedStyle } from './jpeg_camera';
 import { WebcamError, WebcamErrors } from './errors';
+import 'webrtc-adapter/out/adapter_no_global';
 
 const canPlay = (type) => {
   const elem = document.createElement('video');
@@ -90,21 +91,9 @@ export default class JpegCameraHtml5 extends JpegCameraBase {
 
     const getUserMediaOptions = {
       video: {
-        optional: [
-          { minWidth: 2560 },
-          { minWidth: 2048 },
-          { minWidth: 1920 },
-          { minWidth: 1600 },
-          { minWidth: 1280 },
-          { minWidth: 1044 },
-          { minWidth: 920 },
-          { minWidth: 800 },
-          { minWidth: 640 },
-          { minWidth: 480 },
-          { minWidth: 360 },
-        ],
+        width: {min: 640, ideal: 1920}
       },
-      audio: false,
+      audio: false
     };
 
     const success =
