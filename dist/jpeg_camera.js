@@ -1115,7 +1115,21 @@ JpegCameraHtml5.engineCheck = function (success, failure) {
     }
 
     try {
-        navigator.getUserMedia({ video: { width: { ideal: 1920 } } }, success, failure);
+        navigator.getUserMedia({ video: { width: { ideal: 1920 } } }, function (stream) {
+            for (var _len = arguments.length, args = Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
+                args[_key - 1] = arguments[_key];
+            }
+
+            stream.getVideoTracks().forEach(function (track) {
+                return track.stop();
+            });
+            stream.getAudioTracks().forEach(function (track) {
+                return track.stop();
+            });
+            success.apply(undefined, [stream].concat(args));
+        }, function () {
+            return failure.apply(undefined, arguments);
+        });
     } catch (err) {
         failure('getUserMedia could not be initialised.', err);
     }

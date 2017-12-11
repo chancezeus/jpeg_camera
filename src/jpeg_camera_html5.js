@@ -46,7 +46,11 @@ export default class JpegCameraHtml5 extends JpegCameraBase {
         }
 
         try {
-            navigator.getUserMedia({video: {width: {ideal: 1920}}}, success, failure);
+            navigator.getUserMedia({video: {width: {ideal: 1920}}}, (stream, ...args) => {
+                stream.getVideoTracks().forEach((track) => track.stop());
+                stream.getAudioTracks().forEach((track) => track.stop());
+                success(stream, ...args);
+            }, (...args) => failure(...args));
         } catch (err) {
             failure('getUserMedia could not be initialised.', err);
         }
