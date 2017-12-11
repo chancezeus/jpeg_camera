@@ -91,7 +91,7 @@ export default class JpegCameraHtml5 extends JpegCameraBase {
 
     const getUserMediaOptions = {
       video: {
-        width: {min: 640, ideal: 1920}
+        width: {ideal: 1920}
       },
       audio: false
     };
