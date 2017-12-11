@@ -714,7 +714,7 @@ exports.default = JpegCamera;
 
 
 Object.defineProperty(exports, "__esModule", {
-  value: true
+    value: true
 });
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -740,8 +740,8 @@ function _possibleConstructorReturn(self, call) { if (!self) { throw new Referen
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
 var canPlay = function canPlay(type) {
-  var elem = document.createElement('video');
-  return !!(elem.canPlayType && elem.canPlayType(type).replace(/no/, ''));
+    var elem = document.createElement('video');
+    return !!(elem.canPlayType && elem.canPlayType(type).replace(/no/, ''));
 };
 
 // JpegCamera implementation that uses _getUserMedia_ to capture snapshots,
@@ -750,383 +750,375 @@ var canPlay = function canPlay(type) {
 // @private
 
 var JpegCameraHtml5 = function (_JpegCameraBase) {
-  _inherits(JpegCameraHtml5, _JpegCameraBase);
+    _inherits(JpegCameraHtml5, _JpegCameraBase);
 
-  function JpegCameraHtml5(theContainer, options) {
-    _classCallCheck(this, JpegCameraHtml5);
+    function JpegCameraHtml5(theContainer, options) {
+        _classCallCheck(this, JpegCameraHtml5);
 
-    var _this = _possibleConstructorReturn(this, (JpegCameraHtml5.__proto__ || Object.getPrototypeOf(JpegCameraHtml5)).call(this, theContainer, options));
+        var _this = _possibleConstructorReturn(this, (JpegCameraHtml5.__proto__ || Object.getPrototypeOf(JpegCameraHtml5)).call(this, theContainer, options));
 
-    _this.waitForVideoReadyTimer = null;
+        _this.waitForVideoReadyTimer = null;
 
-    _this.statusChecksCount = 0;
-    _this.vorbisAudio = 'audio/ogg; codecs=vorbis';
-    _this.mpegAudio = 'audio/mpeg; ';
-    _this.message = null;
-    _this.videoContainer = null;
-    _this.stream = null;
-    (0, _autoBind2.default)(_this);
-    _this.engineInit();
-    return _this;
-  }
-
-  _createClass(JpegCameraHtml5, [{
-    key: 'destruct',
-    value: function destruct() {
-      this.waitForVideoReadyTimer = null;
-      if (this.video) {
-        this.video.pause();
-        this.video.src = '';
-      }
-      if (this.stream) {
-        this.stream.getVideoTracks().forEach(function (track) {
-          track.stop();
-        });
-        this.stream.getAudioTracks().forEach(function (track) {
-          track.stop();
-        });
-      }
+        _this.statusChecksCount = 0;
+        _this.vorbisAudio = 'audio/ogg; codecs=vorbis';
+        _this.mpegAudio = 'audio/mpeg; ';
+        _this.message = null;
+        _this.videoContainer = null;
+        _this.stream = null;
+        (0, _autoBind2.default)(_this);
+        _this.engineInit();
+        return _this;
     }
-  }, {
-    key: 'engineInit',
-    value: function engineInit() {
-      var _this2 = this;
 
-      this.debug('Using HTML5 engine.');
+    _createClass(JpegCameraHtml5, [{
+        key: 'destruct',
+        value: function destruct() {
+            this.waitForVideoReadyTimer = null;
 
-      this.message = document.createElement('div');
-      this.message.class = 'message';
-      this.message.style.width = '100%';
-      this.message.style.height = '100%';
-      (0, _jpeg_camera.addPrefixedStyle)(this.message, 'boxSizing', 'border-box');
-      this.message.style.overflow = 'hidden';
-      this.message.style.textAlign = 'center';
-      this.message.style.position = 'absolute';
-      this.message.style.zIndex = 3;
-      this.message.innerHTML = this.options.accessMessage;
+            if (this.video) {
+                this.video.pause();
+                this.video.src = '';
+            }
 
-      this.container.appendChild(this.message);
-
-      this.videoContainer = document.createElement('div');
-      this.videoContainer.style.overflow = 'hidden';
-      this.videoContainer.style.position = 'absolute';
-      this.videoContainer.style.zIndex = 1;
-
-      this.container.appendChild(this.videoContainer);
-      this.resizeVideoContainer();
-
-      this.video = document.createElement('video');
-      this.video.autoplay = true;
-      if (this.options.previewMirror) (0, _jpeg_camera.addPrefixedStyle)(this.video, 'transform', 'scalex(-1.0)');
-
-      if (window.AudioContext) {
-        if (canPlay(this.vorbisAudio)) {
-          this.loadShutterSound(this.options.shutterOggUrl);
-        } else if (canPlay(this.mpegAudio)) {
-          this.loadShutterSound(this.options.shutterMp3Url);
+            if (this.stream) {
+                this.stream.getVideoTracks().forEach(function (track) {
+                    return track.stop();
+                });
+                this.stream.getAudioTracks().forEach(function (track) {
+                    return track.stop();
+                });
+            }
         }
-      }
+    }, {
+        key: 'engineInit',
+        value: function engineInit() {
+            var _this2 = this;
 
-      var getUserMediaOptions = {
-        video: {
-          width: {
-            ideal: 1920
-          }
+            this.debug('Using HTML5 engine.');
+
+            this.message = document.createElement('div');
+            this.message.class = 'message';
+            this.message.style.width = '100%';
+            this.message.style.height = '100%';
+            (0, _jpeg_camera.addPrefixedStyle)(this.message, 'boxSizing', 'border-box');
+            this.message.style.overflow = 'hidden';
+            this.message.style.textAlign = 'center';
+            this.message.style.position = 'absolute';
+            this.message.style.zIndex = 3;
+            this.message.innerHTML = this.options.accessMessage;
+
+            this.container.appendChild(this.message);
+
+            this.videoContainer = document.createElement('div');
+            this.videoContainer.style.overflow = 'hidden';
+            this.videoContainer.style.position = 'absolute';
+            this.videoContainer.style.zIndex = 1;
+
+            this.container.appendChild(this.videoContainer);
+            this.resizeVideoContainer();
+
+            this.video = document.createElement('video');
+            this.video.autoplay = true;
+            if (this.options.previewMirror) (0, _jpeg_camera.addPrefixedStyle)(this.video, 'transform', 'scalex(-1.0)');
+
+            if (window.AudioContext) {
+                if (canPlay(this.vorbisAudio)) {
+                    this.loadShutterSound(this.options.shutterOggUrl);
+                } else if (canPlay(this.mpegAudio)) {
+                    this.loadShutterSound(this.options.shutterMp3Url);
+                }
+            }
+
+            // XXX In an older spec first parameter was a string
+            try {
+                return navigator.getUserMedia({ video: { width: { ideal: 1920 } } }, function (stream) {
+                    _this2.removeMessage();
+                    _this2.stream = stream;
+
+                    if (window.URL) {
+                        try {
+                            _this2.video.srcObject = stream;
+                        } catch (error) {
+                            _this2.video.src = URL.createObjectURL(stream);
+                        }
+                    } else {
+                        _this2.video.src = stream;
+                    }
+
+                    _this2.blockElementAccess();
+
+                    return _this2.waitForVideoReady();
+                }, function (err) {
+                    throw new _errors.WebcamError(_errors.WebcamErrors.UNKNOWN_ERROR, err);
+                });
+            } catch (error) {
+                try {
+                    return navigator.getUserMedia('video', success.bind(this), failure.bind(this));
+                } catch (err) {
+                    this.message.innerHTML = '';
+                    throw new _errors.WebcamError(_errors.WebcamErrors.GET_MEDIA_FAILED_INIT, err);
+                }
+            }
         }
-      };
-
-      var success = function success(stream) {
-        _this2.removeMessage();
-        _this2.stream = stream;
-
-        if (window.URL) {
-          try {
-            _this2.video.srcObject = stream;
-          } catch (error) {
-            _this2.video.src = URL.createObjectURL(stream);
-          }
-        } else {
-          _this2.video.src = stream;
+    }, {
+        key: 'resizePreview',
+        value: function resizePreview() {
+            this.resizeVideoContainer();
+            this.resizeVideoBox();
         }
-
-        _this2.blockElementAccess();
-
-        return _this2.waitForVideoReady();
-      };
-      var failure = function failure(err) {
-        throw new _errors.WebcamError(_errors.WebcamErrors.UNKNOWN_ERROR, err);
-      };
-
-      // XXX In an older spec first parameter was a string
-      try {
-        return navigator.getUserMedia(getUserMediaOptions, success.bind(this), failure.bind(this));
-      } catch (error) {
-        try {
-          return navigator.getUserMedia('video', success.bind(this), failure.bind(this));
-        } catch (err) {
-          this.message.innerHTML = '';
-          throw new _errors.WebcamError(_errors.WebcamErrors.GET_MEDIA_FAILED_INIT, err);
+    }, {
+        key: 'resizeVideoContainer',
+        value: function resizeVideoContainer() {
+            var verticalPadding = Math.floor(this.viewHeight * 0.2);
+            var horizontalPadding = Math.floor(this.viewWidth * 0.2);
+            this.message.style.paddingTop = verticalPadding + 'px';
+            this.message.style.paddingBottom = verticalPadding + 'px';
+            this.message.style.paddingLeft = horizontalPadding + 'px';
+            this.message.style.paddingRight = horizontalPadding + 'px';
+            this.videoContainer.style.width = this.viewWidth + 'px';
+            this.videoContainer.style.height = this.viewHeight + 'px';
         }
-      }
-    }
-  }, {
-    key: 'resizePreview',
-    value: function resizePreview() {
-      this.resizeVideoContainer();
-      this.resizeVideoBox();
-    }
-  }, {
-    key: 'resizeVideoContainer',
-    value: function resizeVideoContainer() {
-      var verticalPadding = Math.floor(this.viewHeight * 0.2);
-      var horizontalPadding = Math.floor(this.viewWidth * 0.2);
-      this.message.style.paddingTop = verticalPadding + 'px';
-      this.message.style.paddingBottom = verticalPadding + 'px';
-      this.message.style.paddingLeft = horizontalPadding + 'px';
-      this.message.style.paddingRight = horizontalPadding + 'px';
-      this.videoContainer.style.width = this.viewWidth + 'px';
-      this.videoContainer.style.height = this.viewHeight + 'px';
-    }
-  }, {
-    key: 'enginePlayShutterSound',
-    value: function enginePlayShutterSound() {
-      if (!this.shutterBuffer) {
-        return null;
-      }
+    }, {
+        key: 'enginePlayShutterSound',
+        value: function enginePlayShutterSound() {
+            if (!this.shutterBuffer) {
+                return null;
+            }
 
-      var source = this.audioContext.createBufferSource();
-      source.buffer = this.shutterBuffer;
-      source.connect(this.audioContext.destination);
-      return source.start(0);
-    }
-  }, {
-    key: 'engineCapture',
-    value: function engineCapture(theSnapshot, mirror, quality, scale) {
-      var snapshot = theSnapshot;
-      var crop = this.getCaptureCrop();
+            var source = this.audioContext.createBufferSource();
+            source.buffer = this.shutterBuffer;
+            source.connect(this.audioContext.destination);
+            return source.start(0);
+        }
+    }, {
+        key: 'engineCapture',
+        value: function engineCapture(theSnapshot, mirror, quality, scale) {
+            var snapshot = theSnapshot;
+            var crop = this.getCaptureCrop();
 
-      var canvas = document.createElement('canvas');
-      canvas.width = Math.round(crop.width * scale);
-      canvas.height = Math.round(crop.height * scale);
+            var canvas = document.createElement('canvas');
+            canvas.width = Math.round(crop.width * scale);
+            canvas.height = Math.round(crop.height * scale);
 
-      var context = canvas.getContext('2d');
-      context.drawImage(this.video, crop.xOffset, crop.yOffset, crop.width, crop.height, 0, 0, Math.round(crop.width * scale), Math.round(crop.height * scale));
+            var context = canvas.getContext('2d');
+            context.drawImage(this.video, crop.xOffset, crop.yOffset, crop.width, crop.height, 0, 0, Math.round(crop.width * scale), Math.round(crop.height * scale));
 
-      snapshot.canvas = canvas;
-      snapshot.mirror = mirror;
-      snapshot.quality = quality;
+            snapshot.canvas = canvas;
+            snapshot.mirror = mirror;
+            snapshot.quality = quality;
 
-      return snapshot;
-    }
-  }, {
-    key: 'engineDisplay',
-    value: function engineDisplay(snapshot) {
-      if (this.displayedcanvas) {
-        this.container.removeChild(this.displayedcanvas);
-      }
+            return snapshot;
+        }
+    }, {
+        key: 'engineDisplay',
+        value: function engineDisplay(snapshot) {
+            if (this.displayedcanvas) {
+                this.container.removeChild(this.displayedcanvas);
+            }
 
-      this.displayedcanvas = snapshot.canvas;
-      this.displayedcanvas.style.width = this.viewWidth + 'px';
-      this.displayedcanvas.style.height = this.viewHeight + 'px';
-      this.displayedcanvas.style.top = 0;
-      this.displayedcanvas.style.left = 0;
-      this.displayedcanvas.style.position = 'absolute';
-      this.displayedcanvas.style.zIndex = 2;
-      if (this.options.previewMirror) (0, _jpeg_camera.addPrefixedStyle)(this.displayedcanvas, 'transform', 'scalex(-1.0)');
+            this.displayedcanvas = snapshot.canvas;
+            this.displayedcanvas.style.width = this.viewWidth + 'px';
+            this.displayedcanvas.style.height = this.viewHeight + 'px';
+            this.displayedcanvas.style.top = 0;
+            this.displayedcanvas.style.left = 0;
+            this.displayedcanvas.style.position = 'absolute';
+            this.displayedcanvas.style.zIndex = 2;
+            if (this.options.previewMirror) (0, _jpeg_camera.addPrefixedStyle)(this.displayedcanvas, 'transform', 'scalex(-1.0)');
 
-      return this.container.appendChild(this.displayedcanvas);
-    }
-  }, {
-    key: 'engineGetcanvas',
-    value: function engineGetcanvas(snapshot) {
-      var canvas = document.createElement('canvas');
-      canvas.width = snapshot.canvas.width;
-      canvas.height = snapshot.canvas.height;
-      var context = canvas.getContext('2d');
-      context.drawImage(snapshot.canvas, 0, 0);
-      return canvas;
-    }
-  }, {
-    key: 'engineGetImageData',
-    value: function engineGetImageData(snapshot) {
-      var canvas = snapshot.canvas;
-      var context = canvas.getContext('2d');
-      return context.getImageData(0, 0, canvas.width, canvas.height);
-    }
-  }, {
-    key: 'engineGetBlob',
-    value: function engineGetBlob(snapshot, mime, mirror, quality, callback) {
-      var canvas = void 0;
-      if (mirror) {
-        canvas = document.createElement('canvas');
-        canvas.width = snapshot.canvas.width;
-        canvas.height = snapshot.canvas.height;
+            return this.container.appendChild(this.displayedcanvas);
+        }
+    }, {
+        key: 'engineGetcanvas',
+        value: function engineGetcanvas(snapshot) {
+            var canvas = document.createElement('canvas');
+            canvas.width = snapshot.canvas.width;
+            canvas.height = snapshot.canvas.height;
+            var context = canvas.getContext('2d');
+            context.drawImage(snapshot.canvas, 0, 0);
+            return canvas;
+        }
+    }, {
+        key: 'engineGetImageData',
+        value: function engineGetImageData(snapshot) {
+            var canvas = snapshot.canvas;
+            var context = canvas.getContext('2d');
+            return context.getImageData(0, 0, canvas.width, canvas.height);
+        }
+    }, {
+        key: 'engineGetBlob',
+        value: function engineGetBlob(snapshot, mime, mirror, quality, callback) {
+            var canvas = void 0;
+            if (mirror) {
+                canvas = document.createElement('canvas');
+                canvas.width = snapshot.canvas.width;
+                canvas.height = snapshot.canvas.height;
 
-        var context = canvas.getContext('2d');
-        context.setTransform(1, 0, 0, 1, 0, 0); // reset transformation matrix
-        context.translate(canvas.width, 0);
-        context.scale(-1, 1);
-        context.drawImage(snapshot.canvas, 0, 0);
-      } else {
-        canvas = snapshot.canvas;
-      }
+                var context = canvas.getContext('2d');
+                context.setTransform(1, 0, 0, 1, 0, 0); // reset transformation matrix
+                context.translate(canvas.width, 0);
+                context.scale(-1, 1);
+                context.drawImage(snapshot.canvas, 0, 0);
+            } else {
+                canvas = snapshot.canvas;
+            }
 
-      return canvas.toBlob(function (blob) {
-        return callback(blob);
-      }, mime, quality);
-    }
-  }, {
-    key: 'engineDiscard',
-    value: function engineDiscard(snapshot) {
-      // eslint-disable-next-line no-param-reassign
-      return delete snapshot.canvas;
-    }
-  }, {
-    key: 'engineShowStream',
-    value: function engineShowStream() {
-      if (this.displayedcanvas) {
-        this.container.removeChild(this.displayedcanvas);
-        this.displayedcanvas = null;
-      }
-      this.videoContainer.style.display = 'block';
-      return null;
-    }
-  }, {
-    key: 'removeMessage',
-    value: function removeMessage() {
-      this.message.style.display = 'none';
-      return null;
-    }
-  }, {
-    key: 'loadShutterSound',
-    value: function loadShutterSound(url) {
-      if (this.audioContext || !url) {
-        return null;
-      }
+            return canvas.toBlob(function (blob) {
+                return callback(blob);
+            }, mime, quality);
+        }
+    }, {
+        key: 'engineDiscard',
+        value: function engineDiscard(snapshot) {
+            // eslint-disable-next-line no-param-reassign
+            return delete snapshot.canvas;
+        }
+    }, {
+        key: 'engineShowStream',
+        value: function engineShowStream() {
+            if (this.displayedcanvas) {
+                this.container.removeChild(this.displayedcanvas);
+                this.displayedcanvas = null;
+            }
+            this.videoContainer.style.display = 'block';
+            return null;
+        }
+    }, {
+        key: 'removeMessage',
+        value: function removeMessage() {
+            this.message.style.display = 'none';
+            return null;
+        }
+    }, {
+        key: 'loadShutterSound',
+        value: function loadShutterSound(url) {
+            if (this.audioContext || !url) {
+                return null;
+            }
 
-      this.audioContext = new AudioContext();
+            this.audioContext = new AudioContext();
 
-      var request = new XMLHttpRequest();
-      request.open('GET', url, true);
-      request.responseType = 'arraybuffer';
+            var request = new XMLHttpRequest();
+            request.open('GET', url, true);
+            request.responseType = 'arraybuffer';
 
-      var that = this;
-      request.onload = function () {
-        return that.audioContext.decodeAudioData(request.response, function (buffer) {
-          that.shutterBuffer = buffer;
-        });
-      };
-      return request.send();
-    }
-  }, {
-    key: 'waitForVideoReady',
-    value: function waitForVideoReady() {
-      var videoWidth = parseInt(this.video.videoWidth, 10);
-      var videoHeight = parseInt(this.video.videoHeight, 10);
+            var that = this;
+            request.onload = function () {
+                return that.audioContext.decodeAudioData(request.response, function (buffer) {
+                    that.shutterBuffer = buffer;
+                });
+            };
+            return request.send();
+        }
+    }, {
+        key: 'waitForVideoReady',
+        value: function waitForVideoReady() {
+            var videoWidth = parseInt(this.video.videoWidth, 10);
+            var videoHeight = parseInt(this.video.videoHeight, 10);
 
-      if (videoWidth > 0 && videoHeight > 0) {
-        this.videoContainer.appendChild(this.video);
+            if (videoWidth > 0 && videoHeight > 0) {
+                this.videoContainer.appendChild(this.video);
 
-        this.videoWidth = videoWidth;
-        this.videoHeight = videoHeight;
+                this.videoWidth = videoWidth;
+                this.videoHeight = videoHeight;
 
-        this.video.style.position = 'relative';
-        this.resizeVideoBox();
+                this.video.style.position = 'relative';
+                this.resizeVideoBox();
 
-        return this.prepared(this.videoWidth, this.videoHeight);
-      } else if (this.statusChecksCount > 100) {
-        throw new _errors.WebcamError(_errors.WebcamError.CAMERA_NOT_READY);
-      }
-      this.statusChecksCount++;
-      var that = this;
-      this.waitForVideoReadyTimer = setTimeout(function () {
-        return that.waitForVideoReady();
-      }, 100);
-      return null;
-    }
-  }, {
-    key: 'resizeVideoBox',
-    value: function resizeVideoBox() {
-      var crop = this.getVideoCrop();
-      this.video.style.width = crop.width + 'px';
-      this.video.style.height = crop.height + 'px';
-      this.video.style.left = crop.xOffset + 'px';
-      this.video.style.top = crop.yOffset + 'px';
-    }
-  }, {
-    key: 'getVideoCrop',
-    value: function getVideoCrop() {
-      var videoScale = void 0;
-      var videoRatio = this.videoWidth / this.videoHeight;
-      var viewRatio = this.viewWidth / this.viewHeight;
+                return this.prepared(this.videoWidth, this.videoHeight);
+            } else if (this.statusChecksCount > 100) {
+                throw new _errors.WebcamError(_errors.WebcamError.CAMERA_NOT_READY);
+            }
+            this.statusChecksCount++;
+            var that = this;
+            this.waitForVideoReadyTimer = setTimeout(function () {
+                return that.waitForVideoReady();
+            }, 100);
+            return null;
+        }
+    }, {
+        key: 'resizeVideoBox',
+        value: function resizeVideoBox() {
+            var crop = this.getVideoCrop();
+            this.video.style.width = crop.width + 'px';
+            this.video.style.height = crop.height + 'px';
+            this.video.style.left = crop.xOffset + 'px';
+            this.video.style.top = crop.yOffset + 'px';
+        }
+    }, {
+        key: 'getVideoCrop',
+        value: function getVideoCrop() {
+            var videoScale = void 0;
+            var videoRatio = this.videoWidth / this.videoHeight;
+            var viewRatio = this.viewWidth / this.viewHeight;
 
-      if (videoRatio >= viewRatio) {
-        // fill height, crop width
-        this.debug('Filling height');
-        videoScale = this.viewHeight / this.videoHeight;
-        var scaledVideoWidth = Math.round(this.videoWidth * videoScale);
+            if (videoRatio >= viewRatio) {
+                // fill height, crop width
+                this.debug('Filling height');
+                videoScale = this.viewHeight / this.videoHeight;
+                var scaledVideoWidth = Math.round(this.videoWidth * videoScale);
 
-        return {
-          width: scaledVideoWidth,
-          height: this.viewHeight,
-          xOffset: -Math.floor((scaledVideoWidth - this.viewWidth) / 2.0),
-          yOffset: 0
-        };
-      }
-      // fill width, crop height
-      this.debug('Filling width');
-      videoScale = this.viewWidth / this.videoWidth;
-      var scaledVideoHeight = Math.round(this.videoHeight * videoScale);
+                return {
+                    width: scaledVideoWidth,
+                    height: this.viewHeight,
+                    xOffset: -Math.floor((scaledVideoWidth - this.viewWidth) / 2.0),
+                    yOffset: 0
+                };
+            }
+            // fill width, crop height
+            this.debug('Filling width');
+            videoScale = this.viewWidth / this.videoWidth;
+            var scaledVideoHeight = Math.round(this.videoHeight * videoScale);
 
-      return {
-        width: this.viewWidth,
-        height: scaledVideoHeight,
-        xOffset: 0,
-        yOffset: -Math.floor((scaledVideoHeight - this.viewHeight) / 2.0)
-      };
-    }
-  }, {
-    key: 'getCaptureCrop',
-    value: function getCaptureCrop() {
-      var videoRatio = this.videoWidth / this.videoHeight;
-      var viewRatio = this.viewWidth / this.viewHeight;
+            return {
+                width: this.viewWidth,
+                height: scaledVideoHeight,
+                xOffset: 0,
+                yOffset: -Math.floor((scaledVideoHeight - this.viewHeight) / 2.0)
+            };
+        }
+    }, {
+        key: 'getCaptureCrop',
+        value: function getCaptureCrop() {
+            var videoRatio = this.videoWidth / this.videoHeight;
+            var viewRatio = this.viewWidth / this.viewHeight;
 
-      if (videoRatio >= viewRatio) {
-        // take full height, crop width
-        var snapshotWidth = Math.round(this.videoHeight * viewRatio);
+            if (videoRatio >= viewRatio) {
+                // take full height, crop width
+                var snapshotWidth = Math.round(this.videoHeight * viewRatio);
 
-        return {
-          width: snapshotWidth,
-          height: this.videoHeight,
-          xOffset: Math.floor((this.videoWidth - snapshotWidth) / 2.0),
-          yOffset: 0
-        };
-      }
-      // take full width, crop height
-      var snapshotHeight = Math.round(this.videoWidth / viewRatio);
+                return {
+                    width: snapshotWidth,
+                    height: this.videoHeight,
+                    xOffset: Math.floor((this.videoWidth - snapshotWidth) / 2.0),
+                    yOffset: 0
+                };
+            }
+            // take full width, crop height
+            var snapshotHeight = Math.round(this.videoWidth / viewRatio);
 
-      return {
-        width: this.videoWidth,
-        height: snapshotHeight,
-        xOffset: 0,
-        yOffset: Math.floor((this.videoHeight - snapshotHeight) / 2.0)
-      };
-    }
-  }]);
+            return {
+                width: this.videoWidth,
+                height: snapshotHeight,
+                xOffset: 0,
+                yOffset: Math.floor((this.videoHeight - snapshotHeight) / 2.0)
+            };
+        }
+    }]);
 
-  return JpegCameraHtml5;
+    return JpegCameraHtml5;
 }(_jpeg_camera2.default);
 
 JpegCameraHtml5.engineCheck = function (success, failure) {
-  var canvas = document.createElement('canvas');
-  if (canvas.getContext && !canvas.toBlob) {
-    failure('JpegCamera: Canvas-to-Blob is not loaded');
-  }
-  try {
-    navigator.getUserMedia({ video: true }, success, failure);
-  } catch (err) {
-    failure('getUserMedia could not be initialised.', err);
-  }
+    var canvas = document.createElement('canvas');
+    if (canvas.getContext && !canvas.toBlob) {
+        failure('JpegCamera: Canvas-to-Blob is not loaded');
+    }
+
+    try {
+        navigator.getUserMedia({ video: { width: { ideal: 1920 } } }, success, failure);
+    } catch (err) {
+        failure('getUserMedia could not be initialised.', err);
+    }
 };
 
 exports.default = JpegCameraHtml5;
