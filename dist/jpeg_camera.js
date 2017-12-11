@@ -829,9 +829,10 @@ var JpegCameraHtml5 = function (_JpegCameraBase) {
 
       var getUserMediaOptions = {
         video: {
-          width: { ideal: 1920 }
-        },
-        audio: false
+          width: {
+            ideal: 1920
+          }
+        }
       };
 
       var success = function success(stream) {
