@@ -825,13 +825,6 @@ var JpegCameraHtml5 = function (_JpegCameraBase) {
         }
       }
 
-      var getUserMediaOptions = {
-        video: {
-          optional: [{ minWidth: 2560 }, { minWidth: 2048 }, { minWidth: 1920 }, { minWidth: 1600 }, { minWidth: 1280 }, { minWidth: 1044 }, { minWidth: 920 }, { minWidth: 800 }, { minWidth: 640 }, { minWidth: 480 }, { minWidth: 360 }]
-        },
-        audio: false
-      };
-
       var success = function success(stream) {
         _this2.removeMessage();
         _this2.stream = stream;
@@ -854,17 +847,64 @@ var JpegCameraHtml5 = function (_JpegCameraBase) {
         throw new _errors.WebcamError(_errors.WebcamErrors.UNKNOWN_ERROR, err);
       };
 
-      // XXX In an older spec first parameter was a string
-      try {
-        return navigator.getUserMedia(getUserMediaOptions, success.bind(this), failure.bind(this));
-      } catch (error) {
-        try {
-          return navigator.getUserMedia('video', success.bind(this), failure.bind(this));
-        } catch (err) {
-          this.message.innerHTML = '';
-          throw new _errors.WebcamError(_errors.WebcamErrors.GET_MEDIA_FAILED_INIT, err);
+      var resolutionsToCheck = [[3840, 2160], [1920, 1080], [1600, 1200], [1280, 720], [960, 720], [800, 600], [640, 480], [640, 360]];
+
+      var lastTriedResolutionIndex = -1;
+
+      var getNextResolution = function getNextResolution() {
+        lastTriedResolutionIndex += 1;
+        if (lastTriedResolutionIndex > resolutionsToCheck.length - 1) {
+          failure('Could not find suitable webcam resolution.');
         }
+        return resolutionsToCheck[lastTriedResolutionIndex];
+      };
+
+      var resolutionFinder = function resolutionFinder(res) {
+        _this2.tryResolution(res[0], res[1], function (stream) {
+          if (!_this2.stream) {
+            success(stream);
+          }
+        }, function () {
+          var newRes = getNextResolution();
+          resolutionFinder(newRes);
+        });
+      };
+
+      try {
+        var newRes = getNextResolution();
+        resolutionFinder(newRes);
+      } catch (error) {
+        this.message.innerHTML = '';
+        throw new _errors.WebcamError(_errors.WebcamErrors.GET_MEDIA_FAILED_INIT, error);
       }
+    }
+  }, {
+    key: 'tryResolution',
+    value: function tryResolution(width, height, success, failure) {
+      if (navigator.mediaDevices.getUserMedia) {
+        navigator.mediaDevices.getUserMedia({
+          video: {
+            width: { exact: width },
+            height: { exact: height }
+          },
+          audio: false
+        }).then(function (stream) {
+          success(stream);
+        }).catch(function (err) {
+          failure(err);
+        });
+      }
+      navigator.getUserMedia({
+        video: {
+          mandatory: {
+            minWidth: width,
+            minHeight: height,
+            maxWidth: width,
+            maxHeight: height
+          }
+        },
+        audio: false
+      }, success.bind(this), failure.bind(this));
     }
   }, {
     key: 'resizePreview',
@@ -1120,7 +1160,15 @@ JpegCameraHtml5.engineCheck = function (success, failure) {
     failure('JpegCamera: Canvas-to-Blob is not loaded');
   }
   try {
-    navigator.getUserMedia({ video: true }, success, failure);
+    if (navigator.mediaDevices.getUserMedia) {
+      navigator.mediaDevices.getUserMedia({ video: true }).then(function (stream) {
+        success(stream);
+      }).catch(function (err) {
+        failure(err);
+      });
+    } else {
+      navigator.getUserMedia({ video: true }, success, failure);
+    }
   } catch (err) {
     failure('getUserMedia could not be initialised.', err);
   }

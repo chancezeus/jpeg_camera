@@ -46,7 +46,17 @@ export default class JpegCameraHtml5 extends JpegCameraBase {
       failure('JpegCamera: Canvas-to-Blob is not loaded');
     }
     try {
-      navigator.getUserMedia({ video: true }, success, failure);
+      if (navigator.mediaDevices.getUserMedia) {
+        navigator.mediaDevices.getUserMedia({ video: true })
+          .then((stream) => {
+            success(stream);
+          })
+          .catch((err) => {
+            failure(err);
+          });
+      } else {
+        navigator.getUserMedia({ video: true }, success, failure);
+      }
     } catch (err) {
       failure('getUserMedia could not be initialised.', err);
     }
@@ -88,25 +98,6 @@ export default class JpegCameraHtml5 extends JpegCameraBase {
       }
     }
 
-    const getUserMediaOptions = {
-      video: {
-        optional: [
-          { minWidth: 2560 },
-          { minWidth: 2048 },
-          { minWidth: 1920 },
-          { minWidth: 1600 },
-          { minWidth: 1280 },
-          { minWidth: 1044 },
-          { minWidth: 920 },
-          { minWidth: 800 },
-          { minWidth: 640 },
-          { minWidth: 480 },
-          { minWidth: 360 },
-        ],
-      },
-      audio: false,
-    };
-
     const success =
       (stream) => {
         this.removeMessage();
@@ -131,17 +122,85 @@ export default class JpegCameraHtml5 extends JpegCameraBase {
         throw new WebcamError(WebcamErrors.UNKNOWN_ERROR, err);
       };
 
-    // XXX In an older spec first parameter was a string
-    try {
-      return navigator.getUserMedia(getUserMediaOptions, success.bind(this), failure.bind(this));
-    } catch (error) {
-      try {
-        return navigator.getUserMedia('video', success.bind(this), failure.bind(this));
-      } catch (err) {
-        this.message.innerHTML = '';
-        throw new WebcamError(WebcamErrors.GET_MEDIA_FAILED_INIT, err);
+    const resolutionsToCheck = [
+      [3840, 2160],
+      [1920, 1080],
+      [1600, 1200],
+      [1280, 720],
+      [960, 720],
+      [800, 600],
+      [640, 480],
+      [640, 360],
+    ];
+
+    let lastTriedResolutionIndex = -1;
+
+    const getNextResolution = () => {
+      lastTriedResolutionIndex += 1;
+      if (lastTriedResolutionIndex > resolutionsToCheck.length - 1) {
+        failure('Could not find suitable webcam resolution.');
       }
+      return resolutionsToCheck[lastTriedResolutionIndex];
+    };
+
+    const resolutionFinder = (res) => {
+      this.tryResolution(
+        res[0],
+        res[1],
+        (stream) => {
+          if (!this.stream) {
+            success(stream);
+          }
+        },
+        () => {
+          const newRes = getNextResolution();
+          resolutionFinder(newRes);
+        },
+      );
+    };
+
+    try {
+      const newRes = getNextResolution();
+      resolutionFinder(newRes);
+    } catch (error) {
+      this.message.innerHTML = '';
+      throw new WebcamError(WebcamErrors.GET_MEDIA_FAILED_INIT, error);
     }
+  }
+
+  tryResolution(width, height, success, failure) {
+    if (navigator.mediaDevices.getUserMedia) {
+      navigator.mediaDevices.getUserMedia(
+        {
+          video: {
+            width: { exact: width },
+            height: { exact: height },
+          },
+          audio: false,
+        },
+      )
+        .then((stream) => {
+          success(stream);
+        })
+        .catch((err) => {
+          failure(err);
+        });
+    }
+    navigator.getUserMedia(
+      {
+        video: {
+          mandatory: {
+            minWidth: width,
+            minHeight: height,
+            maxWidth: width,
+            maxHeight: height,
+          },
+        },
+        audio: false,
+      },
+      success.bind(this),
+      failure.bind(this),
+    );
   }
 
   resizePreview() {
