@@ -136,11 +136,13 @@ export default class JpegCameraHtml5 extends JpegCameraBase {
     let lastTriedResolutionIndex = -1;
 
     const getNextResolution = () => {
-      lastTriedResolutionIndex += 1;
-      if (lastTriedResolutionIndex > resolutionsToCheck.length - 1) {
+      if (lastTriedResolutionIndex === resolutionsToCheck.length) {
         failure('Could not find suitable webcam resolution.');
+      } else {
+        lastTriedResolutionIndex += 1;
+        return resolutionsToCheck[lastTriedResolutionIndex];
       }
-      return resolutionsToCheck[lastTriedResolutionIndex];
+      return null;
     };
 
     const resolutionFinder = (res) => {
@@ -154,7 +156,9 @@ export default class JpegCameraHtml5 extends JpegCameraBase {
         },
         () => {
           const newRes = getNextResolution();
-          resolutionFinder(newRes);
+          if (newRes) {
+            resolutionFinder(newRes);
+          }
         },
       );
     };

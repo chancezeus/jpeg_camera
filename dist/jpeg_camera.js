@@ -855,8 +855,10 @@ var JpegCameraHtml5 = function (_JpegCameraBase) {
         lastTriedResolutionIndex += 1;
         if (lastTriedResolutionIndex > resolutionsToCheck.length - 1) {
           failure('Could not find suitable webcam resolution.');
+        } else {
+          return resolutionsToCheck[lastTriedResolutionIndex];
         }
-        return resolutionsToCheck[lastTriedResolutionIndex];
+        return null;
       };
 
       var resolutionFinder = function resolutionFinder(res) {
@@ -866,7 +868,9 @@ var JpegCameraHtml5 = function (_JpegCameraBase) {
           }
         }, function () {
           var newRes = getNextResolution();
-          resolutionFinder(newRes);
+          if (newRes) {
+            resolutionFinder(newRes);
+          }
         });
       };
 
