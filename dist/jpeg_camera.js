@@ -849,34 +849,23 @@ var JpegCameraHtml5 = function (_JpegCameraBase) {
 
       var resolutionsToCheck = [[3840, 2160], [1920, 1080], [1600, 1200], [1280, 720], [960, 720], [800, 600], [640, 480], [640, 360]];
 
-      var lastTriedResolutionIndex = -1;
-
-      var getNextResolution = function getNextResolution() {
-        if (lastTriedResolutionIndex === resolutionsToCheck.length) {
-          failure('Could not find suitable webcam resolution.');
-        } else {
-          lastTriedResolutionIndex += 1;
-          return resolutionsToCheck[lastTriedResolutionIndex];
-        }
-        return null;
-      };
-
-      var resolutionFinder = function resolutionFinder(res) {
+      var resolutionFinder = function resolutionFinder(resolutions) {
+        var res = resolutions.shift();
         _this2.tryResolution(res[0], res[1], function (stream) {
           if (!_this2.stream) {
             success(stream);
           }
         }, function () {
-          var newRes = getNextResolution();
-          if (newRes) {
-            resolutionFinder(newRes);
+          if (resolutions.length !== 0) {
+            resolutionFinder(resolutions);
+          } else {
+            failure('Could not find suitable webcam resolution.');
           }
         });
       };
 
       try {
-        var newRes = getNextResolution();
-        resolutionFinder(newRes);
+        resolutionFinder(resolutionsToCheck);
       } catch (error) {
         this.message.innerHTML = '';
         throw new _errors.WebcamError(_errors.WebcamErrors.GET_MEDIA_FAILED_INIT, error);
@@ -885,6 +874,8 @@ var JpegCameraHtml5 = function (_JpegCameraBase) {
   }, {
     key: 'tryResolution',
     value: function tryResolution(width, height, success, failure) {
+      // eslint-disable-next-line no-console
+      console.log('Webcam trying ' + width + 'x' + height);
       if (navigator.mediaDevices.getUserMedia) {
         navigator.mediaDevices.getUserMedia({
           video: {
@@ -897,18 +888,19 @@ var JpegCameraHtml5 = function (_JpegCameraBase) {
         }).catch(function (err) {
           failure(err);
         });
+      } else {
+        navigator.getUserMedia({
+          video: {
+            mandatory: {
+              minWidth: width,
+              minHeight: height,
+              maxWidth: width,
+              maxHeight: height
+            }
+          },
+          audio: false
+        }, success.bind(this), failure.bind(this));
       }
-      navigator.getUserMedia({
-        video: {
-          mandatory: {
-            minWidth: width,
-            minHeight: height,
-            maxWidth: width,
-            maxHeight: height
-          }
-        },
-        audio: false
-      }, success.bind(this), failure.bind(this));
     }
   }, {
     key: 'resizePreview',

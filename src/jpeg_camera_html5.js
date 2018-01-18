@@ -133,19 +133,8 @@ export default class JpegCameraHtml5 extends JpegCameraBase {
       [640, 360],
     ];
 
-    let lastTriedResolutionIndex = -1;
-
-    const getNextResolution = () => {
-      if (lastTriedResolutionIndex === resolutionsToCheck.length) {
-        failure('Could not find suitable webcam resolution.');
-      } else {
-        lastTriedResolutionIndex += 1;
-        return resolutionsToCheck[lastTriedResolutionIndex];
-      }
-      return null;
-    };
-
-    const resolutionFinder = (res) => {
+    const resolutionFinder = (resolutions) => {
+      const res = resolutions.shift();
       this.tryResolution(
         res[0],
         res[1],
@@ -155,17 +144,17 @@ export default class JpegCameraHtml5 extends JpegCameraBase {
           }
         },
         () => {
-          const newRes = getNextResolution();
-          if (newRes) {
-            resolutionFinder(newRes);
+          if (resolutions.length !== 0) {
+            resolutionFinder(resolutions);
+          } else {
+            failure('Could not find suitable webcam resolution.');
           }
         },
       );
     };
 
     try {
-      const newRes = getNextResolution();
-      resolutionFinder(newRes);
+      resolutionFinder(resolutionsToCheck);
     } catch (error) {
       this.message.innerHTML = '';
       throw new WebcamError(WebcamErrors.GET_MEDIA_FAILED_INIT, error);
@@ -173,6 +162,8 @@ export default class JpegCameraHtml5 extends JpegCameraBase {
   }
 
   tryResolution(width, height, success, failure) {
+    // eslint-disable-next-line no-console
+    console.log(`Webcam trying ${width}x${height}`);
     if (navigator.mediaDevices.getUserMedia) {
       navigator.mediaDevices.getUserMedia(
         {
@@ -189,22 +180,23 @@ export default class JpegCameraHtml5 extends JpegCameraBase {
         .catch((err) => {
           failure(err);
         });
-    }
-    navigator.getUserMedia(
-      {
-        video: {
-          mandatory: {
-            minWidth: width,
-            minHeight: height,
-            maxWidth: width,
-            maxHeight: height,
+    } else {
+      navigator.getUserMedia(
+        {
+          video: {
+            mandatory: {
+              minWidth: width,
+              minHeight: height,
+              maxWidth: width,
+              maxHeight: height,
+            },
           },
+          audio: false,
         },
-        audio: false,
-      },
-      success.bind(this),
-      failure.bind(this),
-    );
+        success.bind(this),
+        failure.bind(this),
+      );
+    }
   }
 
   resizePreview() {
