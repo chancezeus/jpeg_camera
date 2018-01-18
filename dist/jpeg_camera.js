@@ -852,10 +852,10 @@ var JpegCameraHtml5 = function (_JpegCameraBase) {
       var lastTriedResolutionIndex = -1;
 
       var getNextResolution = function getNextResolution() {
-        lastTriedResolutionIndex += 1;
-        if (lastTriedResolutionIndex > resolutionsToCheck.length - 1) {
+        if (lastTriedResolutionIndex === resolutionsToCheck.length) {
           failure('Could not find suitable webcam resolution.');
         } else {
+          lastTriedResolutionIndex += 1;
           return resolutionsToCheck[lastTriedResolutionIndex];
         }
         return null;
