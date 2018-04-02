@@ -39,18 +39,29 @@ export default class JpegCameraHtml5 extends JpegCameraBase {
         }
     }
 
-    static engineCheck = (success, failure) => {
+    static engineCheck(success, failure) {
         const canvas = document.createElement('canvas');
+
         if (canvas.getContext && !canvas.toBlob) {
             failure('JpegCamera: Canvas-to-Blob is not loaded');
         }
 
         try {
-            navigator.getUserMedia({video: {width: {ideal: 1920}}}, (stream, ...args) => {
-                stream.getVideoTracks().forEach((track) => track.stop());
-                stream.getAudioTracks().forEach((track) => track.stop());
-                success(stream, ...args);
-            }, (...args) => failure(...args));
+            if (navigator.mediaDevices.getUserMedia) {
+                navigator.mediaDevices.getUserMedia({video: {width: {ideal: 1920}}})
+                    .then(stream => {
+                        stream.getVideoTracks().forEach((track) => track.stop());
+                        stream.getAudioTracks().forEach((track) => track.stop());
+                        success(stream);
+                    })
+                    .catch(err => failure(err));
+            } else {
+                navigator.getUserMedia({video: {width: {ideal: 1920}}}, stream => {
+                    stream.getVideoTracks().forEach((track) => track.stop());
+                    stream.getAudioTracks().forEach((track) => track.stop());
+                    success(stream);
+                }, err => failure(err));
+            }
         } catch (err) {
             failure('getUserMedia could not be initialised.', err);
         }
@@ -92,39 +103,104 @@ export default class JpegCameraHtml5 extends JpegCameraBase {
             }
         }
 
-        // XXX In an older spec first parameter was a string
-        try {
-            return navigator.getUserMedia(
-                {video: {width: {ideal: 1920}}},
-                (stream) => {
-                    this.removeMessage();
-                    this.stream = stream;
+        const success =
+            (stream) => {
+                this.removeMessage();
+                this.stream = stream;
 
-                    if (window.URL) {
-                        try {
-                            this.video.srcObject = stream;
-                        } catch (error) {
-                            this.video.src = URL.createObjectURL(stream);
-                        }
-                    } else {
-                        this.video.src = stream;
+                if (window.URL) {
+                    try {
+                        this.video.srcObject = stream;
+                    } catch (error) {
+                        this.video.src = URL.createObjectURL(stream);
                     }
-
-                    this.blockElementAccess();
-
-                    return this.waitForVideoReady();
-                },
-                (err) => {
-                    throw new WebcamError(WebcamErrors.UNKNOWN_ERROR, err);
+                } else {
+                    this.video.src = stream;
                 }
+
+                this.blockElementAccess();
+
+                return this.waitForVideoReady();
+            };
+        const failure =
+            (err) => {
+                throw new WebcamError(WebcamErrors.UNKNOWN_ERROR, err);
+            };
+
+        const resolutionsToCheck = [
+            [3840, 2160],
+            [1920, 1080],
+            [1600, 1200],
+            [1280, 720],
+            [960, 720],
+            [800, 600],
+            [640, 480],
+            [640, 360],
+        ];
+
+        const resolutionFinder = (resolutions) => {
+            const res = resolutions.shift();
+            this.tryResolution(
+                res[0],
+                res[1],
+                (stream) => {
+                    if (!this.stream) {
+                        success(stream);
+                    }
+                },
+                () => {
+                    if (resolutions.length !== 0) {
+                        resolutionFinder(resolutions);
+                    } else {
+                        failure('Could not find suitable webcam resolution.');
+                    }
+                },
             );
+        };
+
+        try {
+            resolutionFinder(resolutionsToCheck);
         } catch (error) {
-            try {
-                return navigator.getUserMedia('video', success.bind(this), failure.bind(this));
-            } catch (err) {
-                this.message.innerHTML = '';
-                throw new WebcamError(WebcamErrors.GET_MEDIA_FAILED_INIT, err);
-            }
+            this.message.innerHTML = '';
+            throw new WebcamError(WebcamErrors.GET_MEDIA_FAILED_INIT, error);
+        }
+    }
+
+    tryResolution(width, height, success, failure) {
+        // eslint-disable-next-line no-console
+        console.log(`Webcam trying ${width}x${height}`);
+        if (navigator.mediaDevices.getUserMedia) {
+            navigator.mediaDevices.getUserMedia(
+                {
+                    video: {
+                        width: {exact: width},
+                        height: {exact: height},
+                    },
+                    audio: false,
+                },
+            )
+                .then((stream) => {
+                    success(stream);
+                })
+                .catch((err) => {
+                    failure(err);
+                });
+        } else {
+            navigator.getUserMedia(
+                {
+                    video: {
+                        mandatory: {
+                            minWidth: width,
+                            minHeight: height,
+                            maxWidth: width,
+                            maxHeight: height,
+                        },
+                    },
+                    audio: false,
+                },
+                success.bind(this),
+                failure.bind(this),
+            );
         }
     }
 
@@ -194,7 +270,7 @@ export default class JpegCameraHtml5 extends JpegCameraBase {
         return this.container.appendChild(this.displayedcanvas);
     }
 
-    engineGetcanvas(snapshot) {
+    engineGetCanvas(snapshot) {
         const canvas = document.createElement('canvas');
         canvas.width = snapshot.canvas.width;
         canvas.height = snapshot.canvas.height;
